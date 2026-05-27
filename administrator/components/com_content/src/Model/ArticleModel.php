@@ -405,6 +405,16 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
                 $item->tags = new TagsHelper();
                 $item->tags->getTagIds($item->id, 'com_content.article');
 
+                $db = $this->getDatabase();
+                $query = $db->createQuery()
+                    ->select($db->quoteName('category_id'))
+                    ->from($db->quoteName('#__category_item_map'))
+                    ->where($db->quoteName('context') . '= :context')
+                    ->where($db->quoteName('item_id') . '= :itemId')
+                    ->bind(':context', $this->typeAlias, ParameterType::STRING)
+                    ->bind(':itemId', $item->id, ParameterType::INTEGER);
+                $item->secondary_categories = $db->setQuery($query)->loadColumn();
+
                 $item->featured_up   = null;
                 $item->featured_down = null;
 
@@ -801,6 +811,8 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
                 }
             }
 
+            $this->saveSecondaryCategories($data);
+
             $this->workflowAfterSave($data);
 
             return true;
@@ -1003,6 +1015,25 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     protected function preprocessForm(Form $form, $data, $group = 'content')
     {
+        $wa = Factory::getApplication()->getDocument()->getWebAssetManager();
+        $wa->useScript('com_content.secondary-categories');
+
+        $db = $this->getDatabase();
+        $query = $db->createQuery()
+            ->select($db->quoteName('id'))
+            ->from($db->quoteName('#__categories'))
+            ->where($db->quoteName('extension') . ' = ' . $db->quote('com_content'))
+            ->where($db->quoteName('parent_id') . ' = 1')
+            ->where($db->quoteName('level') . ' = 1')
+            ->where($db->quoteName('alias') . ' = ' . $db->quote('uncategorised'));
+
+        $uncategorisedId = (int) $db->setQuery($query)->loadResult();
+
+        Factory::getApplication()->getDocument()->addScriptOptions(
+            'com_content.secondary-categories',
+            ['uncategorisedId' => $uncategorisedId]
+        );
+
         if ($this->canCreateCategory()) {
             $form->setFieldAttribute('catid', 'allowAdd', 'true');
 
@@ -1110,9 +1141,108 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             $db->setQuery($query);
             $db->execute();
 
+            // Delete the article from the category mapping table
+            $query = $db->createQuery()
+                ->delete($db->quoteName('#__category_item_map'))
+                ->where($db->quoteName('context') . ' = :context')
+                ->whereIn($db->quoteName('item_id'), $pks)
+                ->bind(':context', $this->typeAlias, ParameterType::STRING);
+            $db->setQuery($query)->execute();
+
             $this->workflow->deleteAssociation($pks);
         }
 
         return $return;
+    }
+
+    /**
+     * Saves the secondary categories for an article.
+     *
+     * @param   array  $data  The form data.
+     *
+     * @return  void
+     *
+     * @since   __DEPLOY_VERSION__
+     */
+    private function saveSecondaryCategories(array $data): void
+    {
+        $itemId = (int) $this->getState($this->getName() . '.id');
+        $primaryCategoryId = (int) ($data['catid'] ?? 0);
+
+        $db = $this->getDatabase();
+
+        // Get the ID of the uncategorised category to prevent it from being used as a secondary category.
+        $query = $db->createQuery()
+            ->select($db->quoteName('id'))
+            ->from($db->quoteName('#__categories'))
+            ->where($db->quoteName('extension') . ' = ' . $db->quote('com_content'))
+            ->where($db->quoteName('alias')     . ' = ' . $db->quote('uncategorised'))
+            ->where($db->quoteName('parent_id') . ' = 1')
+            ->where($db->quoteName('level')     . ' = 1');
+
+        $uncategorisedId = (int) $db->setQuery($query)->loadResult();
+
+        // Delete all existing secondary category mappings for this article.
+        $query = $db->createQuery()
+            ->delete($db->quoteName('#__category_item_map'))
+            ->where($db->quoteName('context') . ' = :context')
+            ->where($db->quoteName('item_id') . ' = :itemId')
+            ->bind(':context', $this->typeAlias, ParameterType::STRING)
+            ->bind(':itemId',  $itemId, ParameterType::INTEGER);
+
+        $db->setQuery($query)->execute();
+
+        if (!$primaryCategoryId || $primaryCategoryId === $uncategorisedId) {
+            return;
+        }
+        $secondaryCategoryIds = $data['secondary_categories'] ?? [];
+        $secondaryCategoryIds = array_map('intval', (array) $secondaryCategoryIds);
+        $submitted = array_filter($secondaryCategoryIds);
+
+        if (empty($submitted)) {
+            return;
+        }
+
+        // Remove the primary category ID from the submitted secondary category IDs to prevent duplication.
+        $submitted = array_diff($submitted, [$primaryCategoryId]);
+
+        if (empty($submitted)) {
+            return;
+        }
+
+        // Validate the submitted secondary category IDs to ensure they exist and are published.
+        $extension = 'com_content';
+        $query = $db->createQuery()
+            ->select($db->quoteName('id'))
+            ->from($db->quoteName('#__categories'))
+            ->where($db->quoteName('extension') . ' = :extension')
+            ->where($db->quoteName('published') . ' > -2')
+            ->whereIn($db->quoteName('id'), $submitted, ParameterType::INTEGER)
+            ->bind(':extension', $extension, ParameterType::STRING);
+
+        $validIds = array_map('intval', $db->setQuery($query)->loadColumn());
+
+        if (empty($validIds)) {
+            return;
+        }
+
+        // Insert the valid secondary category mappings into the database.
+        foreach (array_values($validIds) as $ordering => $catId) {
+            $query = $db->createQuery()
+                ->insert($db->quoteName('#__category_item_map'))
+                ->columns([
+                    $db->quoteName('context'),
+                    $db->quoteName('item_id'),
+                    $db->quoteName('category_id'),
+                    $db->quoteName('ordering'),
+                ])
+                ->values(':context, :itemId, :catId, :ordering')
+                ->bind(':context', $this->typeAlias, ParameterType::STRING)
+                ->bind(':itemId', $itemId, ParameterType::INTEGER)
+                ->bind(':catId', $catId, ParameterType::INTEGER)
+                ->bind(':ordering', $ordering, ParameterType::INTEGER);
+
+            $db->setQuery($query)->execute();
+        }
     }
 }

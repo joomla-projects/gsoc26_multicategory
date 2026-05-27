@@ -67,6 +67,15 @@
 		/>
 
 		<field
+			name="secondary_categories"
+			type="secondarycategories"
+            label="COM_CONTENT_FIELD_SECONDARY_CATEGORIES_LABEL"
+			multiple="true"
+			layout="joomla.form.field.list-fancy-select"
+    		addfieldprefix="Joomla\Component\Content\Administrator\Field"
+		/>
+
+		<field
 			name="state"
 			type="list"
 			label="JSTATUS"
