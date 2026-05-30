@@ -61,21 +61,21 @@ class CategoryMultipleField extends CategoryeditField
 
         $primaryCatId = (int) $this->form->getValue($primaryCategoryField, 0);
 
-        $user = $this->getCurrentUser();
+        $user       = $this->getCurrentUser();
         $viewLevels = $user->getAuthorisedViewLevels();
-        $state = ArrayHelper::toInteger($published);
+        $state      = ArrayHelper::toInteger($published);
 
         $root = Factory::getApplication()->bootComponent($extension)->getCategory()->get('root');
         foreach ($root->getChildren(true) as $category) {
-            if (!in_array((int) $category->published, $state, true)) {
+            if (!\in_array((int) $category->published, $state, true)) {
                 continue;
             }
 
-            if (!$user->authorise('core.admin') && !in_array((int) $category->access, $viewLevels, true)) {
+            if (!$user->authorise('core.admin') && !\in_array((int) $category->access, $viewLevels, true)) {
                 continue;
             }
 
-            $option = new \stdClass();
+            $option            = new \stdClass();
             $option->value     = $category->id;
             $option->text      = $category->title;
             $option->level     = $category->level;

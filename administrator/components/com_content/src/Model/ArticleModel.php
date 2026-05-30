@@ -1144,8 +1144,8 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     private function getManageableSecondaryCategoryIds(int $currentCategoryId): array
     {
-        $db = $this->getDatabase();
-        $user = $this->getCurrentUser();
+        $db        = $this->getDatabase();
+        $user      = $this->getCurrentUser();
         $extension = 'com_content';
 
         $query = $db->createQuery()
@@ -1177,7 +1177,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
         }
 
 
-         $currentAsset = $extension . '.category.' . $currentCategoryId;
+        $currentAsset = $extension . '.category.' . $currentCategoryId;
 
         foreach ($categories as $categoryId) {
             //  never allows the primary category itself.
@@ -1264,7 +1264,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     private function saveSecondaryCategories(array $data): void
     {
-        $itemId = (int) $this->getState($this->getName() . '.id');
+        $itemId    = (int) $this->getState($this->getName() . '.id');
         $submitted =  $data['secondary_categories'] ?? [];
 
         $db = $this->getDatabase();
