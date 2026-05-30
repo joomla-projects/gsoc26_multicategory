@@ -128,6 +128,3 @@ class CategoryMultipleField extends CategoryeditField
         return $options;
     }
 }
-
-
-
