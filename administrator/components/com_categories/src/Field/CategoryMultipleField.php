@@ -66,9 +66,7 @@ class CategoryMultipleField extends CategoryeditField
         $state = ArrayHelper::toInteger($published);
 
         $root = Factory::getApplication()->bootComponent($extension)->getCategory()->get('root');
-
         foreach ($root->getChildren(true) as $category) {
-
             if (!in_array((int) $category->published, $state, true)) {
                 continue;
             }
@@ -88,7 +86,6 @@ class CategoryMultipleField extends CategoryeditField
         }
 
         foreach ($options as $option) {
-
             if ($option->published == 1) {
                 $option->text = str_repeat('- ', max(0, $option->level - 1)) . $option->text;
             } else {
@@ -107,11 +104,9 @@ class CategoryMultipleField extends CategoryeditField
                 }
             }
         } else {
-
             $currentAsset = $extension . '.category.' . $primaryCatId;
 
             foreach ($options as $i => $option) {
-
                 if ((int) $option->value != $primaryCatId && !$user->authorise('core.edit.state', $currentAsset)) {
                     unset($options[$i]);
                     continue;
