@@ -1265,7 +1265,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
     private function saveSecondaryCategories(array $data): void
     {
         $itemId = (int) $this->getState($this->getName() . '.id');
-        $submitted = array_filter(array_map('intval', (array) ($data['secondary_categories'] ?? [])));
+        $submitted =  $data['secondary_categories'] ?? [];
 
         $db = $this->getDatabase();
 
@@ -1283,23 +1283,19 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             return;
         }
 
-        $submitted = array_values($submitted);
-        foreach ($submitted as $ordering => $categoryId) {
-            $query = $db->createQuery()
-                ->insert($db->quoteName('#__category_item_map'))
-                ->columns([
-                    $db->quoteName('context'),
-                    $db->quoteName('item_id'),
-                    $db->quoteName('category_id'),
-                    $db->quoteName('ordering'),
-                ])
-                ->values(':context, :itemId, :categoryId, :ordering')
-                ->bind(':context', $this->typeAlias, ParameterType::STRING)
-                ->bind(':itemId', $itemId, ParameterType::INTEGER)
-                ->bind(':categoryId', $categoryId, ParameterType::INTEGER)
-                ->bind(':ordering', $ordering, ParameterType::INTEGER);
+        $query = $db->createQuery()
+            ->insert($db->quoteName('#__category_item_map'))
+            ->columns([
+                $db->quoteName('context'),
+                $db->quoteName('item_id'),
+                $db->quoteName('category_id'),
+                $db->quoteName('ordering'),
+            ]);
 
-            $db->setQuery($query)->execute();
+        foreach ($submitted as $ordering => $categoryId) {
+            $query->values(implode(',', $query->bindArray([$this->typeAlias, $itemId, $categoryId, $ordering], [ParameterType::STRING, ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::INTEGER])));
         }
+
+        $db->setQuery($query)->execute();
     }
 }

@@ -11,7 +11,6 @@
 namespace Joomla\Component\Categories\Administrator\Field;
 
 use Joomla\CMS\Factory;
-use Joomla\Database\ParameterType;
 use Joomla\Utilities\ArrayHelper;
 
 // phpcs:disable PSR1.Files.SideEffects
@@ -19,11 +18,11 @@ use Joomla\Utilities\ArrayHelper;
 // phpcs:enable PSR1.Files.SideEffects
 
 /**
- * Secondary Categories field.
+ * Multiple category selection field.
  *
  * @since __DEPLOY_VERSION__
  */
-class SecondaryCategoriesField extends CategoryeditField
+class CategoryMultipleField extends CategoryeditField
 {
     /**
      * Field type.
@@ -32,7 +31,7 @@ class SecondaryCategoriesField extends CategoryeditField
      *
      * @since  __DEPLOY_VERSION__
      */
-    public $type = 'SecondaryCategories';
+    public $type = 'CategoryMultiple';
 
     /**
      * Layout to use for the field.
@@ -58,48 +57,38 @@ class SecondaryCategoriesField extends CategoryeditField
         $extension = $this->element['extension'] ? (string) $this->element['extension'] : 'com_content';
 
         // Always use the primary category as ACL reference.
-        $oldCat = (int) $this->form->getValue('catid', 0);
+        $primaryCategoryField = !empty($this->element['primarycategoryfield']) ? (string) $this->element['primarycategoryfield'] : 'catid';
 
-        $db   = $this->getDatabase();
+        $primaryCatId = (int) $this->form->getValue($primaryCategoryField, 0);
+
         $user = $this->getCurrentUser();
-
-        $query = $db->createQuery()
-            ->select(
-                [
-                    $db->quoteName('a.id', 'value'),
-                    $db->quoteName('a.title', 'text'),
-                    $db->quoteName('a.level'),
-                    $db->quoteName('a.published'),
-                    $db->quoteName('a.lft'),
-                    $db->quoteName('a.language'),
-                ]
-            )
-            ->from($db->quoteName('#__categories', 'a'))
-            ->where($db->quoteName('a.extension') . ' = :extension')
-            ->bind(':extension', $extension, ParameterType::STRING);
-
+        $viewLevels = $user->getAuthorisedViewLevels();
         $state = ArrayHelper::toInteger($published);
-        $query->whereIn($db->quoteName('a.published'), $state);
 
-        if (!$user->authorise('core.admin')) {
-            $query->whereIn(
-                $db->quoteName('a.access'),
-                $user->getAuthorisedViewLevels()
-            );
-        }
+        $root = Factory::getApplication()->bootComponent($extension)->getCategory()->get('root');
 
-        $query->order($db->quoteName('a.lft') . ' ASC');
+        foreach ($root->getChildren(true) as $category) {
 
-        $db->setQuery($query);
+            if (!in_array((int) $category->published, $state, true)) {
+                continue;
+            }
 
-        try {
-            $options = $db->loadObjectList();
-        } catch (\RuntimeException $e) {
-            Factory::getApplication()->enqueueMessage($e->getMessage(), 'error');
-            return [];
+            if (!$user->authorise('core.admin') && !in_array((int) $category->access, $viewLevels, true)) {
+                continue;
+            }
+
+            $option = new \stdClass();
+            $option->value     = $category->id;
+            $option->text      = $category->title;
+            $option->level     = $category->level;
+            $option->published = $category->published;
+            $option->language  = $category->language;
+
+            $options[] = $option;
         }
 
         foreach ($options as $option) {
+
             if ($option->published == 1) {
                 $option->text = str_repeat('- ', max(0, $option->level - 1)) . $option->text;
             } else {
@@ -111,25 +100,26 @@ class SecondaryCategoriesField extends CategoryeditField
             }
         }
 
-        if ($oldCat === 0) {
+        if ($primaryCatId === 0) {
             foreach ($options as $i => $option) {
-                if ( $option->level != 0 && !$user->authorise('core.create', $extension . '.category.' . $option->value )) {
+                if (!$user->authorise('core.create', $extension . '.category.' . $option->value)) {
                     unset($options[$i]);
                 }
             }
         } else {
-            $currentAsset = $extension . '.category.' . $oldCat;
+
+            $currentAsset = $extension . '.category.' . $primaryCatId;
 
             foreach ($options as $i => $option) {
 
-                if ($option->level != 0 && $option->value != $oldCat && !$user->authorise('core.edit.state', $currentAsset)) {
+                if ((int) $option->value != $primaryCatId && !$user->authorise('core.edit.state', $currentAsset)) {
                     unset($options[$i]);
                     continue;
                 }
 
                 $targetAsset = $extension . '.category.' . $option->value;
 
-                if ($option->level != 0 && $option->value != $oldCat && !$user->authorise('core.create', $targetAsset)) {
+                if ((int) $option->value != $primaryCatId && !$user->authorise('core.create', $targetAsset)) {
                     unset($options[$i]);
                 }
             }
@@ -138,3 +128,6 @@ class SecondaryCategoriesField extends CategoryeditField
         return $options;
     }
 }
+
+
+

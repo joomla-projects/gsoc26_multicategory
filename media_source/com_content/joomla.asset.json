@@ -101,7 +101,8 @@
       "type": "script",
       "uri": "com_content/secondary-categories.min.js",
       "dependencies": [
-        "core"
+        "core",
+        "webcomponent.field-fancy-select"
       ]
     }
   ]
