@@ -455,7 +455,7 @@ class ArticlesModel extends ListModel
             $categoryId = (int) $categoryId;
 
             $type                 = $this->getState('filter.category_id.include', true) ? '=' : '<>';
-            $include              = $this->getState('filter.article_id.include', true);
+            $include              = $this->getState('filter.category_id.include', true);
             $includeSubcategories = $this->getState('filter.subcategories', false);
             $levels               = (int) $this->getState('filter.max_category_levels', 1);
 
