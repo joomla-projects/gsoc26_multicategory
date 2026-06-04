@@ -20,7 +20,7 @@ $categories = [];
 //primary category
 $title = $this->escape($displayData['item']->category_title);
 
-if($displayData['params']->get('link_category') && !empty($displayData['item']->catid)) {
+if ($displayData['params']->get('link_category') && !empty($displayData['item']->catid)) {
     $categories[] = '<a href="' . Route::_(
         RouteHelper::getCategoryRoute($displayData['item']->catid, $displayData['item']->category_language)
     ) . '">' . $title . '</a>';
@@ -32,7 +32,7 @@ if($displayData['params']->get('link_category') && !empty($displayData['item']->
 foreach (($displayData['item']->secondary_categories ?? []) as $category) {
     $title = $this->escape($category->title);
 
-    if($displayData['params']->get('link_category') && !empty($category->id)) {
+    if ($displayData['params']->get('link_category') && !empty($category->id)) {
         $categories[] = '<a href="' . Route::_(
             RouteHelper::getCategoryRoute($category->id, $category->language)
         ) . '">' . $title . '</a>';
