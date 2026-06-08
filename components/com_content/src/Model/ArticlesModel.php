@@ -470,10 +470,11 @@ class ArticlesModel extends ListModel
         $categoryIds = array_values(array_unique(array_filter($categoryIds)));
 
         if ($categoryIds) {
-            $include              = $this->getState('filter.category_id.include', true);
-            $includeSubcategories = $this->getState('filter.subcategories', false);
-            $levels               = (int) $this->getState('filter.max_category_levels', 1);
-            $boundedCategoryIds   = implode(',', $query->bindArray($categoryIds));
+            $include                    = $this->getState('filter.category_id.include', true);
+            $includeSubcategories       = $this->getState('filter.subcategories', false);
+            $includeSecondaryCategories = $this->getState('filter.include_secondary_categories', true);
+            $levels                     = (int) $this->getState('filter.max_category_levels', 1);
+            $boundedCategoryIds         = implode(',', $query->bindArray($categoryIds));
 
             if ($includeSubcategories) {
                 $primarySubQuery = $db->createQuery()
@@ -498,11 +499,14 @@ class ArticlesModel extends ListModel
                 $primaryCondition = $db->quoteName('a.catid') . ' IN (' . $boundedCategoryIds . ')';
             }
 
-            $secondaryCondition = $db->quoteName('a.id') . ' IN (' . $this->getSecondaryCategoryQuery($categoryIds, $includeSubcategories, $levels) . ')';
+            $categoryCondition = $primaryCondition;
 
-            $categoryCondition = '(' . $primaryCondition . ' OR ' . $secondaryCondition . ')';
+            if ($includeSecondaryCategories) {
+                $secondaryCondition = $db->quoteName('a.id') . ' IN (' . $this->getSecondaryCategoryQuery($categoryIds, $includeSubcategories, $levels) . ')';
+                $categoryCondition = '(' . $primaryCondition . ' OR ' . $secondaryCondition . ')';
+            }
 
-            $query->where($include ? $categoryCondition : 'NOT ' . $categoryCondition);
+            $query->where($include ? $categoryCondition : 'NOT (' . $categoryCondition . ')');
         }
 
         // Filter by author

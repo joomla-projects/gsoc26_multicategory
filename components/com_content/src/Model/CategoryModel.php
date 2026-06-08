@@ -214,6 +214,8 @@ class CategoryModel extends ListModel
             $this->setState('filter.subcategories', true);
         }
 
+        $this->setState('filter.include_secondary_categories', (bool) $params->get('include_secondary_categories', 1));
+
         $this->setState('filter.language', Multilanguage::isEnabled());
 
         $this->setState('layout', $app->getInput()->getString('layout'));
@@ -275,6 +277,7 @@ class CategoryModel extends ListModel
             // Filter.subcategories indicates whether to include articles from subcategories in the list or blog
             $model->setState('filter.subcategories', $this->getState('filter.subcategories'));
             $model->setState('filter.max_category_levels', $this->getState('filter.max_category_levels'));
+            $model->setState('filter.include_secondary_categories', $this->getState('filter.include_secondary_categories', true));
             $model->setState('list.links', $this->getState('list.links'));
 
             if ($limit >= 0) {
@@ -363,6 +366,7 @@ class CategoryModel extends ListModel
                 $params                = $this->state->get('params');
                 $options               = [];
                 $options['countItems'] = $params->get('show_cat_num_articles', 1) || !$params->get('show_empty_categories_cat', 0);
+                $options['includeSecondaryCategories'] = (bool) $params->get('include_secondary_categories', 1);
                 $options['access']     = $params->get('check_access_rights', 1);
             } else {
                 $options['countItems'] = 0;
