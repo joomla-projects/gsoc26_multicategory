@@ -185,22 +185,31 @@ class ArticlesModel extends ListModel
      * Builds a subquery to return article ids mapped to a category
      * through secondary category relations.
      *
-     * @param   integer   $categoryId            Category id.
-     * @param   boolean   $includeSubcategories  Include child categories.
-     * @param   integer   $levels                subcategory depth.
+     * @param   integer|array  $categoryIds           Category id(s).
+     * @param   boolean        $includeSubcategories  Include child categories.
+     * @param   integer        $levels                Subcategory depth.
      *
      * @return  QueryInterface
      *
      * @since   __DEPLOY_VERSION__
      */
-    protected function getSecondaryCategoryQuery(int $categoryId, bool $includeSubcategories = false, int $levels = 1): QueryInterface
+    protected function getSecondaryCategoryQuery(int|array $categoryIds, bool $includeSubcategories = false, int $levels = 1): QueryInterface
     {
         $db = $this->getDatabase();
 
+        $categoryIds = ArrayHelper::toInteger((array) $categoryIds);
+        $categoryIds = array_values(array_unique(array_filter($categoryIds)));
+
         $query = $db->createQuery()
-            ->select($db->quoteName('cim.item_id'))
+            ->select('DISTINCT ' . $db->quoteName('cim.item_id'))
             ->from($db->quoteName('#__category_item_map', 'cim'))
             ->where($db->quoteName('cim.context') . ' = ' . $db->quote('com_content.article'));
+
+        if (!$categoryIds) {
+            return $query->where('1 = 0');
+        }
+
+        $categoryIdsSql = implode(',', $categoryIds);
 
         if ($includeSubcategories) {
             $subQuery = $db->createQuery()
@@ -212,19 +221,18 @@ class ArticlesModel extends ListModel
                     $db->quoteName('sub.lft') . ' > ' . $db->quoteName('parent.lft')
                     . ' AND ' . $db->quoteName('sub.rgt') . ' < ' . $db->quoteName('parent.rgt')
                 )
-                ->where($db->quoteName('parent.id') . ' = ' . (int) $categoryId);
+                ->where($db->quoteName('parent.id') . ' IN (' . $categoryIdsSql . ')');
 
             if ($levels >= 0) {
                 $subQuery->where($db->quoteName('sub.level') . ' <= ' . $db->quoteName('parent.level') . ' + ' . (int) $levels);
             }
 
             $query->where(
-                '(' . $db->quoteName('cim.category_id') . ' = ' . (int) $categoryId . ' OR ' . $db->quoteName('cim.category_id') . ' IN (' . $subQuery . ')' . ')'
+                '(' . $db->quoteName('cim.category_id') . ' IN (' . $categoryIdsSql . ')'
+                . ' OR ' . $db->quoteName('cim.category_id') . ' IN (' . $subQuery . ')' . ')'
             );
         } else {
-            $query->where(
-                $db->quoteName('cim.category_id') . ' = ' . (int) $categoryId
-            );
+            $query->where($db->quoteName('cim.category_id') . ' IN (' . $categoryIdsSql . ')');
         }
 
         return $query;
@@ -452,61 +460,49 @@ class ArticlesModel extends ListModel
         $categoryId = $this->getState('filter.category_id');
 
         if (is_numeric($categoryId)) {
-            $categoryId = (int) $categoryId;
+            $categoryIds = [(int) $categoryId];
+        } elseif (\is_array($categoryId) && (\count($categoryId) > 0)) {
+            $categoryIds = ArrayHelper::toInteger($categoryId);
+        } else {
+            $categoryIds = [];
+        }
 
-            $type                 = $this->getState('filter.category_id.include', true) ? '=' : '<>';
+        $categoryIds = array_values(array_unique(array_filter($categoryIds)));
+
+        if ($categoryIds) {
             $include              = $this->getState('filter.category_id.include', true);
             $includeSubcategories = $this->getState('filter.subcategories', false);
             $levels               = (int) $this->getState('filter.max_category_levels', 1);
+            $boundedCategoryIds   = implode(',', $query->bindArray($categoryIds));
 
-            // primary category logic
             if ($includeSubcategories) {
                 $primarySubQuery = $db->createQuery()
                     ->select($db->quoteName('sub.id'))
                     ->from($db->quoteName('#__categories', 'sub'))
                     ->join(
                         'INNER',
-                        $db->quoteName('#__categories', 'this'),
-                        $db->quoteName('sub.lft') . ' > ' . $db->quoteName('this.lft')
-                            . ' AND ' . $db->quoteName('sub.rgt') . ' < ' . $db->quoteName('this.rgt')
+                        $db->quoteName('#__categories', 'parent'),
+                        $db->quoteName('sub.lft') . ' > ' . $db->quoteName('parent.lft')
+                            . ' AND ' . $db->quoteName('sub.rgt') . ' < ' . $db->quoteName('parent.rgt')
                     )
-                    ->where($db->quoteName('this.id') . ' = :primaryCategoryId');
+                    ->where($db->quoteName('parent.id') . ' IN (' . $boundedCategoryIds . ')');
 
                 if ($levels >= 0) {
-                    $primarySubQuery->where(
-                        $db->quoteName('sub.level') . ' <= ' . $db->quoteName('this.level') . ' + :primaryLevels'
-                    );
-
-                    $primarySubQuery->bind(':primaryLevels', $levels, ParameterType::INTEGER);
+                    $primarySubQuery->where($db->quoteName('sub.level') . ' <= ' . $db->quoteName('parent.level') . ' + :primaryLevels');
+                    $query->bind(':primaryLevels', $levels, ParameterType::INTEGER);
                 }
 
-                $primaryCondition = '(' . $db->quoteName('a.catid') . $type . ':primaryCategoryId' . ' OR ' . $db->quoteName('a.catid') . ' IN (' . $primarySubQuery . '))';
+                $primaryCondition = '(' . $db->quoteName('a.catid') . ' IN (' . $boundedCategoryIds . ')'
+                    . ' OR ' . $db->quoteName('a.catid') . ' IN (' . $primarySubQuery . '))';
             } else {
-                $primaryCondition = $db->quoteName('a.catid') . $type . ':primaryCategoryId';
+                $primaryCondition = $db->quoteName('a.catid') . ' IN (' . $boundedCategoryIds . ')';
             }
 
-            $secondaryCondition = $db->quoteName('a.id') . ' IN (' . $this->getSecondaryCategoryQuery($categoryId, $includeSubcategories, $levels) . ')';
+            $secondaryCondition = $db->quoteName('a.id') . ' IN (' . $this->getSecondaryCategoryQuery($categoryIds, $includeSubcategories, $levels) . ')';
 
-            if ($include) {
-                $query->where(
-                    '(' . $primaryCondition . ' OR ' . $secondaryCondition . ')'
-                );
-            } else {
-                $query->where(
-                    '(' . $primaryCondition . ' OR NOT (' . $secondaryCondition . '))'
-                );
-            }
-            $query->bind(':primaryCategoryId', $categoryId, ParameterType::INTEGER);
-        } elseif (\is_array($categoryId) && (\count($categoryId) > 0)) {
-            $categoryId = ArrayHelper::toInteger($categoryId);
+            $categoryCondition = '(' . $primaryCondition . ' OR ' . $secondaryCondition . ')';
 
-            if (!empty($categoryId)) {
-                if ($this->getState('filter.category_id.include', true)) {
-                    $query->whereIn($db->quoteName('a.catid'), $categoryId);
-                } else {
-                    $query->whereNotIn($db->quoteName('a.catid'), $categoryId);
-                }
-            }
+            $query->where($include ? $categoryCondition : 'NOT ' . $categoryCondition);
         }
 
         // Filter by author
