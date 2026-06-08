@@ -234,7 +234,7 @@ class Categories implements CategoryInterface, DatabaseAwareInterface
     {
         return match ($this->_extension) {
             'com_content' => 'com_content.article',
-            default => null,
+            default       => null,
         };
     }
 

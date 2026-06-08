@@ -182,6 +182,18 @@ class ArticlesModel extends ListModel
     }
 
     /**
+     * Get the category mapping context.
+     *
+     * @return  string
+     *
+     * @since __DEPLOY_VERSION__
+     */
+    protected function getCategoryMappingContext(): string
+    {
+        return 'com_content.article';
+    }
+
+    /**
      * Builds a subquery to return article ids mapped to a category
      * through secondary category relations.
      *
@@ -503,7 +515,7 @@ class ArticlesModel extends ListModel
 
             if ($includeSecondaryCategories) {
                 $secondaryCondition = $db->quoteName('a.id') . ' IN (' . $this->getSecondaryCategoryQuery($categoryIds, $includeSubcategories, $levels) . ')';
-                $categoryCondition = '(' . $primaryCondition . ' OR ' . $secondaryCondition . ')';
+                $categoryCondition  = '(' . $primaryCondition . ' OR ' . $secondaryCondition . ')';
             }
 
             $query->where($include ? $categoryCondition : 'NOT (' . $categoryCondition . ')');
@@ -716,6 +728,65 @@ class ArticlesModel extends ListModel
 
         return $query;
     }
+    /**
+     * Get secondary categories for multiple articles.
+     *
+     * @param   array  $itemIds  Article ids.
+     *
+     * @return  array
+     *
+     * @since   __DEPLOY_VERSION__
+     */
+    protected function getMappedCategories(array $itemIds): array
+    {
+        if (empty($itemIds)) {
+            return [];
+        }
+
+        $db   = $this->getDatabase();
+        $user = $this->getCurrentUser();
+        $context = $this->getCategoryMappingContext();
+
+        $query = $db->createQuery()
+            ->select([
+                $db->quoteName('m.item_id'),
+                $db->quoteName('c.id'),
+                $db->quoteName('c.title'),
+                $db->quoteName('c.alias'),
+                $db->quoteName('c.language'),
+                $db->quoteName('c.access'),
+            ])
+            ->from($db->quoteName('#__category_item_map', 'm'))
+            ->join(
+                'INNER',
+                $db->quoteName('#__categories', 'c'),
+                $db->quoteName('c.id') . ' = ' . $db->quoteName('m.category_id')
+            );
+
+            $query->where($db->quoteName('m.context') . ' = :context')
+                ->where($db->quoteName('m.item_id') . ' IN (' . implode(',', $query->bindArray($itemIds)) . ')')
+                ->where($db->quoteName('c.published') . ' = 1')
+                ->bind(':context', $context);
+
+        if (!$user->authorise('core.admin')) {
+            $query->whereIn(
+                $db->quoteName('c.access'),
+                $user->getAuthorisedViewLevels()
+            );
+        }
+
+        $db->setQuery($query);
+
+        $result = [];
+
+        $values = $db->loadObjectList();
+
+        foreach ($values as $category) {
+            $result[$category->item_id][] = $category;
+        }
+
+        return $result;
+    }
 
     /**
      * Method to get a list of articles.
@@ -729,7 +800,6 @@ class ArticlesModel extends ListModel
     public function getItems()
     {
         $items  = parent::getItems();
-
         $user   = $this->getCurrentUser();
         $userId = $user->id;
         $guest  = $user->guest;
@@ -739,8 +809,9 @@ class ArticlesModel extends ListModel
         // Get the global params
         $globalParams = ComponentHelper::getParams('com_content', true);
 
-        $taggedItems     = [];
-        $associatedItems = [];
+        $taggedItems            = [];
+        $associatedItems        = [];
+        $secondaryCategoryItems = [];
 
         // Convert the parameter fields into objects.
         foreach ($items as $i => $item) {
@@ -751,6 +822,8 @@ class ArticlesModel extends ListModel
             $item->layout               = $articleParams->get('layout');
 
             $item->params = clone $this->getState('params');
+
+            $secondaryCategoryItems[$item->id] = $i;
 
             /**
              * For blogs, article params override menu item params only if menu param = 'use_article'
@@ -866,6 +939,14 @@ class ArticlesModel extends ListModel
 
             foreach ($associatedItems as $itemId => $i) {
                 $items[$i]->associations = $associations[$itemId] ?? [];
+            }
+        }
+
+        if ($secondaryCategoryItems) {
+            $itemIds = array_keys($secondaryCategoryItems);
+
+            foreach ($this->getMappedCategories($itemIds) as $itemId => $categories) {
+                $items[$secondaryCategoryItems[$itemId]]->secondary_categories = $categories;
             }
         }
 

@@ -363,11 +363,11 @@ class CategoryModel extends ListModel
     {
         if (!\is_object($this->_item)) {
             if (isset($this->state) && !empty($this->state->get('params'))) {
-                $params                = $this->state->get('params');
-                $options               = [];
-                $options['countItems'] = $params->get('show_cat_num_articles', 1) || !$params->get('show_empty_categories_cat', 0);
+                $params                                = $this->state->get('params');
+                $options                               = [];
+                $options['countItems']                 = $params->get('show_cat_num_articles', 1) || !$params->get('show_empty_categories_cat', 0);
                 $options['includeSecondaryCategories'] = (bool) $params->get('include_secondary_categories', 1);
-                $options['access']     = $params->get('check_access_rights', 1);
+                $options['access']                     = $params->get('check_access_rights', 1);
             } else {
                 $options['countItems'] = 0;
             }
