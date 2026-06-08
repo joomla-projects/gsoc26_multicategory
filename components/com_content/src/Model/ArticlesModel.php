@@ -743,8 +743,8 @@ class ArticlesModel extends ListModel
             return [];
         }
 
-        $db   = $this->getDatabase();
-        $user = $this->getCurrentUser();
+        $db      = $this->getDatabase();
+        $user    = $this->getCurrentUser();
         $context = $this->getCategoryMappingContext();
 
         $query = $db->createQuery()
@@ -763,10 +763,10 @@ class ArticlesModel extends ListModel
                 $db->quoteName('c.id') . ' = ' . $db->quoteName('m.category_id')
             );
 
-            $query->where($db->quoteName('m.context') . ' = :context')
-                ->where($db->quoteName('m.item_id') . ' IN (' . implode(',', $query->bindArray($itemIds)) . ')')
-                ->where($db->quoteName('c.published') . ' = 1')
-                ->bind(':context', $context);
+        $query->where($db->quoteName('m.context') . ' = :context')
+            ->where($db->quoteName('m.item_id') . ' IN (' . implode(',', $query->bindArray($itemIds)) . ')')
+            ->where($db->quoteName('c.published') . ' = 1')
+            ->bind(':context', $context);
 
         if (!$user->authorise('core.admin')) {
             $query->whereIn(
