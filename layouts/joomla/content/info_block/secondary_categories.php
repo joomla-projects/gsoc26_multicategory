@@ -21,9 +21,9 @@ foreach (($displayData['item']->secondary_categories ?? []) as $category) {
     $title = $this->escape($category->title);
 
     if ($displayData['params']->get('link_secondary_categories') && !empty($category->id)) {
-        $categories[] = '<a href="' . Route::_(
+        $categories[] = '<a href="' . $this->escape(Route::_(
             RouteHelper::getCategoryRoute($category->id, $category->language)
-        ) . '">' . $title . '</a>';
+        )) . '">' . $title . '</a>';
     } else {
         $categories[] = '<span>' . $title . '</span>';
     }

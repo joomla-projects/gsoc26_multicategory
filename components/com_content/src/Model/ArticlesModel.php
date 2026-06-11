@@ -768,6 +768,11 @@ class ArticlesModel extends ListModel
             ->where($db->quoteName('c.published') . ' = 1')
             ->bind(':context', $context);
 
+            // Filter by language
+        if ($this->getState('filter.language')) {
+            $query->whereIn($db->quoteName('c.language'), [Factory::getApplication()->getLanguage()->getTag(), '*'], ParameterType::STRING);
+        }
+
         if (!$user->authorise('core.admin')) {
             $query->whereIn(
                 $db->quoteName('c.access'),
