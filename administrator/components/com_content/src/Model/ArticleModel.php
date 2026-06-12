@@ -1014,8 +1014,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     protected function preprocessForm(Form $form, $data, $group = 'content')
     {
-       $app = Factory::getApplication();
-
+        $app      = Factory::getApplication();
         $document = $app->getDocument();
 
         if ($document instanceof HtmlDocument) {
