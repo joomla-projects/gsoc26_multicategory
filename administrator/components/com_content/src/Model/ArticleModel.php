@@ -11,6 +11,7 @@
 namespace Joomla\Component\Content\Administrator\Model;
 
 use Joomla\CMS\Date\Date;
+use Joomla\CMS\Document\HtmlDocument;
 use Joomla\CMS\Event\AbstractEvent;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Filter\InputFilter;
@@ -788,7 +789,9 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             }
         }
 
-        $data['secondary_categories'] = $this->normalizeSecondaryCategories($data);
+        if (\array_key_exists('secondary_categories', $data)) {
+            $data['secondary_categories'] = $this->normalizeSecondaryCategories($data);
+        }
 
         if (parent::save($data)) {
             // Check if featured is set and if not managed by workflow
@@ -805,7 +808,9 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
                 }
             }
 
-            $this->saveSecondaryCategories($data);
+            if (\array_key_exists('secondary_categories', $data)) {
+                $this->saveSecondaryCategories($data);
+            }
 
             $this->workflowAfterSave($data);
 
@@ -1009,8 +1014,14 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     protected function preprocessForm(Form $form, $data, $group = 'content')
     {
-        $wa = Factory::getApplication()->getDocument()->getWebAssetManager();
-        $wa->useScript('com_content.secondary-categories');
+       $app = Factory::getApplication();
+
+        $document = $app->getDocument();
+
+        if ($document instanceof HtmlDocument) {
+            $document->getWebAssetManager()
+                ->useScript('com_content.secondary-categories');
+        }
 
         if ($this->canCreateCategory()) {
             $form->setFieldAttribute('catid', 'allowAdd', 'true');
