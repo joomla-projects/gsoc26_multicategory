@@ -1014,14 +1014,6 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     protected function preprocessForm(Form $form, $data, $group = 'content')
     {
-        $app      = Factory::getApplication();
-        $document = $app->getDocument();
-
-        if ($document instanceof HtmlDocument) {
-            $document->getWebAssetManager()
-                ->useScript('com_content.secondary-categories');
-        }
-
         if ($this->canCreateCategory()) {
             $form->setFieldAttribute('catid', 'allowAdd', 'true');
 
