@@ -11,7 +11,6 @@
 namespace Joomla\Component\Content\Administrator\Model;
 
 use Joomla\CMS\Date\Date;
-use Joomla\CMS\Document\HtmlDocument;
 use Joomla\CMS\Event\AbstractEvent;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Filter\InputFilter;
