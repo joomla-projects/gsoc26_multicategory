@@ -70,7 +70,7 @@
 			name="secondary_categories"
 			type="categorymultiple"
 			primarycategoryfield="catid"
-            label="COM_CONTENT_FIELD_SECONDARY_CATEGORIES_LABEL"
+            label="JSECONDARY_CATEGORIES"
 			description="COM_CONTENT_FIELD_SECONDARY_CATEGORIES_DESC"
 			multiple="true"
 			extension="com_content"
