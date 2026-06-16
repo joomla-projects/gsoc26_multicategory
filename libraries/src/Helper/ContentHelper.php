@@ -76,10 +76,12 @@ class ContentHelper
             $records[(int) $item->id] = $item;
         }
 
-        // The relation query does not return a value for cases without relations of a particular state / condition, set zero as default
+        // Initialize counters only when requested.
         foreach ($items as $item) {
             foreach ($counter_names as $n) {
-                $item->{$n} = 0;
+                if (!isset($item->{$n}) || ($config->reset_counters ?? true)) {
+                    $item->{$n} = 0;
+                }
             }
         }
 
@@ -108,6 +110,20 @@ class ContentHelper
 
                 $query = $db->createQuery()
                     ->from($db->quoteName($related_tbl, 'c'));
+                break;
+
+            case 'category_item_map':
+                $recid_col = 'm.category_id';
+
+                $query = $db->createQuery()
+                    ->from($db->quoteName('#__category_item_map', 'm'))
+                    ->innerJoin(
+                        $db->quoteName($related_tbl, 'c'),
+                        $db->quoteName('m.item_id') . ' = ' . $db->quoteName('c.id')
+                            . ' AND ' . $db->quoteName('m.context') . ' = :context'
+                    )
+                    ->bind(':context', $config->context);
+
                 break;
 
             default:
@@ -139,7 +155,7 @@ class ContentHelper
                 $id = (int) $relation->catid;
                 $cn = $counter_names[$relation->state];
 
-                $records[$id]->{$cn} = $relation->count;
+                $records[$id]->{$cn} += (int) $relation->count;
             }
         }
 
