@@ -330,7 +330,7 @@ class ContentComponent extends MVCComponent implements
             'relation_type'       => 'category_or_group',
             'uses_workflows'      => true,
             'workflows_component' => 'com_content',
-            'reset_counters'       => true,
+            'reset_counters'      => true,
         ];
 
         $secondaryConfig = (object) [
@@ -341,7 +341,7 @@ class ContentComponent extends MVCComponent implements
             'context'             => 'com_content.article',
             'uses_workflows'      => true,
             'workflows_component' => 'com_content',
-            'reset_counters'       => false,
+            'reset_counters'      => false,
         ];
 
         LibraryContentHelper::countRelations($items, $config);
