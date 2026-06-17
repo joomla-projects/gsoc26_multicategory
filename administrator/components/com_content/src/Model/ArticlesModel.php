@@ -402,7 +402,27 @@ class ArticlesModel extends ListModel
                     $categoryWhere .= ' AND ' . $db->quoteName('c.level') . ' <= ' . $bounded[2];
                 }
 
-                $subCatItemsWhere[] = '(' . $categoryWhere . ')';
+                $primaryWhere = $categoryWhere;
+
+                // Check for articles assigned to matching secondary categories.
+                $secondaryQuery = $db->createQuery()
+                    ->select('1')
+                    ->from($db->quoteName('#__category_item_map', 'cim'))
+                    ->innerJoin(
+                        $db->quoteName('#__categories', 'cat'),
+                        $db->quoteName('cat.id') . ' = ' . $db->quoteName('cim.category_id')
+                    )
+                    ->where($db->quoteName('cim.item_id') . ' = ' . $db->quoteName('a.id'))
+                    ->where($db->quoteName('cim.context') . ' = ' . $db->quote('com_content.article'))
+                    ->where($db->quoteName('cat.lft') . ' >= ' . $bounded[0])
+                    ->where($db->quoteName('cat.rgt') . ' <= ' . $bounded[1]);
+
+                if ($level) {
+                    $secondaryQuery->where($db->quoteName('cat.level') . ' <= ' . $bounded[2]);
+                }
+
+                $subCatItemsWhere[] = '(' . $primaryWhere . ' OR EXISTS (' . $secondaryQuery . '))';
+
             }
 
             $query->where('(' . implode(' OR ', $subCatItemsWhere) . ')');
