@@ -335,6 +335,8 @@ class ArticlesModel extends ListModel
             }
         }
 
+        $groups = [];
+
         // Filter by access level on categories.
         if (!$user->authorise('core.admin')) {
             $groups = $user->getAuthorisedViewLevels();
@@ -417,12 +419,15 @@ class ArticlesModel extends ListModel
                     ->where($db->quoteName('cat.lft') . ' >= ' . $bounded[0])
                     ->where($db->quoteName('cat.rgt') . ' <= ' . $bounded[1]);
 
+                if (!$user->authorise('core.admin')) {
+                    $secondaryQuery->whereIn($db->quoteName('cat.access'), $groups);
+                }
+
                 if ($level) {
                     $secondaryQuery->where($db->quoteName('cat.level') . ' <= ' . $bounded[2]);
                 }
 
                 $subCatItemsWhere[] = '(' . $primaryWhere . ' OR EXISTS (' . $secondaryQuery . '))';
-
             }
 
             $query->where('(' . implode(' OR ', $subCatItemsWhere) . ')');
