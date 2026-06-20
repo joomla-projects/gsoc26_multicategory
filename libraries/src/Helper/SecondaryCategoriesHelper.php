@@ -79,7 +79,7 @@ class SecondaryCategoriesHelper extends CMSHelper
 
         // Prevent duplicate key errors: check what already exists
         $existing = $this->getCurrentSecondaryCategoriesByItem($itemId);
-        $catIds = array_diff($catIds, $existing);
+        $catIds   = array_diff($catIds, $existing);
 
         if (empty($catIds)) {
             return;
@@ -95,7 +95,7 @@ class SecondaryCategoriesHelper extends CMSHelper
             ->bind(':itemId', $itemId, ParameterType::INTEGER);
 
         $maxOrdering = (int) $db->setQuery($maxOrderingQuery)->loadResult();
-        $ordering = $maxOrdering + 1;
+        $ordering    = $maxOrdering + 1;
 
         $query = $db->createQuery()
             ->insert($db->quoteName('#__category_item_map'))

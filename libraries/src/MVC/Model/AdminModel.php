@@ -131,10 +131,10 @@ abstract class AdminModel extends FormModel
      * @since  3.4
      */
     protected $batch_commands = [
-        'assetgroup_id'        => 'batchAccess',
-        'language_id'          => 'batchLanguage',
-        'secondary_category'   =>  'batchSecondaryCategory',
-        'tag'                  => 'batchTag',
+        'assetgroup_id'      => 'batchAccess',
+        'language_id'        => 'batchLanguage',
+        'secondary_category' => 'batchSecondaryCategory',
+        'tag'                => 'batchTag',
     ];
 
     /**
