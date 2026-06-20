@@ -823,7 +823,7 @@ abstract class AdminModel extends FormModel
                 // Check if the user has permission to assign the target category
                 $targetAsset = $typeAlias . '.category.' . $secondaryCategoryId;
 
-                if(!$this->user->authorise('core.create', $targetAsset)) {
+                if (!$this->user->authorise('core.create', $targetAsset)) {
                     throw new \RuntimeException(Text::_('JLIB_APPLICATION_ERROR_BATCH_CANNOT_EDIT'));
                 }
                 $helper->addMappings((int) $pk, [$secondaryCategoryId]);
