@@ -30,7 +30,9 @@ use Joomla\Utilities\ArrayHelper;
 /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
 $wa = $this->getDocument()->getWebAssetManager();
 $wa->useScript('table.columns')
-    ->useScript('multiselect');
+    ->useScript('multiselect')
+    ->addInlineStyle('#adminForm .js-stools-container-filters-visible { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); }'
+);
 
 $app       = Factory::getApplication();
 $user      = $this->getCurrentUser();
