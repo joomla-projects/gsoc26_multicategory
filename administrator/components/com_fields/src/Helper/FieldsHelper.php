@@ -357,7 +357,7 @@ class FieldsHelper
         $secondaryCatIds = $data->secondary_categories ?? $form->getValue('secondary_categories');
         if (!empty($secondaryCatIds)) {
             $secondaryArray = \is_array($secondaryCatIds) ? $secondaryCatIds : explode(',', $secondaryCatIds);
-            $primaryArray = \is_array($data->fieldscatid) ? $data->fieldscatid : [(int) $data->fieldscatid];
+            $primaryArray   = \is_array($data->fieldscatid) ? $data->fieldscatid : [(int) $data->fieldscatid];
 
             // Merge and remove duplicates so we don't load the same custom field twice
             $data->fieldscatid = array_values(array_unique(array_merge($primaryArray, $secondaryArray)));

@@ -96,6 +96,17 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
     protected $event_after_change_featured = null;
 
     /**
+     * Secondary categories available during the current save operation.
+     *
+     * Used to expose all assigned categories to the Fields plugin before the
+     * article is stored.
+     *
+     * @var    array<int>
+     * @since  __DEPLOY_VERSION__
+     */
+    private array $runtimeSecondaryCategories = [];
+
+    /**
      * Constructor.
      *
      * @param   array                  $config       An array of configuration options (name, state, dbo, table_path, ignore_request).
@@ -338,6 +349,15 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     protected function prepareTable($table)
     {
+          $table->fieldscatid = array_values(
+            array_unique(
+                array_merge(
+                    [(int) $table->catid],
+                    $this->runtimeSecondaryCategories
+                )
+            )
+        );
+
         // Set the publish date to now
         if ($table->state == Workflow::CONDITION_PUBLISHED && (int) $table->publish_up == 0) {
             $table->publish_up = Factory::getDate()->toSql();
@@ -806,7 +826,8 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
         }
 
         if (\array_key_exists('secondary_categories', $data)) {
-            $data['secondary_categories'] = $this->normalizeSecondaryCategories($data);
+            $data['secondary_categories']     = $this->normalizeSecondaryCategories($data);
+            $this->runtimeSecondaryCategories = $data['secondary_categories'];
         }
 
         if (parent::save($data)) {

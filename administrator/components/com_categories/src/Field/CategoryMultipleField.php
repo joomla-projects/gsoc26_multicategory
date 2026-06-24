@@ -161,5 +161,4 @@ class CategoryMultipleField extends CategoryeditField
 
         return $html;
     }
-
 }
