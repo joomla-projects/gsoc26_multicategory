@@ -146,7 +146,7 @@ class FieldsHelper
          * belong to the category
          */
         if ($item && (isset($item->catid) || isset($item->fieldscatid))) {
-            $assignedCatIds = $item->catid ?? $item->fieldscatid;
+            $assignedCatIds = $item->fieldscatid ?? $item->catid;
 
             if (!\is_array($assignedCatIds)) {
                 $assignedCatIds = explode(',', $assignedCatIds);
@@ -348,6 +348,21 @@ class FieldsHelper
             $data->fieldscatid = $assignedCatids;
         }
 
+        // Ensure fieldscatid is initialized with the primary category if it wasn't set yet (happens on form reload)
+        if (!isset($data->fieldscatid) && $assignedCatids) {
+            $data->fieldscatid = $assignedCatids;
+        }
+
+        // Merge secondary categories into fieldscatid so getFields() loads fields for BOTH primary and secondary
+        $secondaryCatIds = $data->secondary_categories ?? $form->getValue('secondary_categories');
+        if (!empty($secondaryCatIds)) {
+            $secondaryArray = \is_array($secondaryCatIds) ? $secondaryCatIds : explode(',', $secondaryCatIds);
+            $primaryArray = \is_array($data->fieldscatid) ? $data->fieldscatid : [(int) $data->fieldscatid];
+
+            // Merge and remove duplicates so we don't load the same custom field twice
+            $data->fieldscatid = array_values(array_unique(array_merge($primaryArray, $secondaryArray)));
+        }
+
         /*
          * If there is a catid field we need to reload the page when the catid
          * is changed
@@ -359,6 +374,19 @@ class FieldsHelper
             $form->setFieldAttribute('catid', 'refresh-enabled', true);
             $form->setFieldAttribute('catid', 'refresh-cat-id', $assignedCatids);
             $form->setFieldAttribute('catid', 'refresh-section', $section);
+        }
+
+        /*
+         * If there is a secondary_categories field we need to reload the page when it
+         * is changed to update the custom fields
+         */
+        if ($form->getField('secondary_categories') && $parts[0] != 'com_fields') {
+            $secondaryCatIds = $data->secondary_categories ?? $form->getValue('secondary_categories');
+            $secondaryCatIds = \is_array($secondaryCatIds) ? implode(',', $secondaryCatIds) : (string) $secondaryCatIds;
+
+            $form->setFieldAttribute('secondary_categories', 'refresh-enabled', true);
+            $form->setFieldAttribute('secondary_categories', 'refresh-cat-id', $secondaryCatIds);
+            $form->setFieldAttribute('secondary_categories', 'refresh-section', $section);
         }
 
         /*

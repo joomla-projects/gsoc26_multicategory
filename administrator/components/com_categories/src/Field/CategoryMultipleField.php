@@ -40,7 +40,7 @@ class CategoryMultipleField extends CategoryeditField
      *
      * @since __DEPLOY_VERSION__
      */
-    protected $layout = 'joomla.form.field.list-fancy-select';
+    protected $layout = 'joomla.form.field.categoryedit';
 
     /**
      * Method to get the field options.
@@ -122,4 +122,44 @@ class CategoryMultipleField extends CategoryeditField
 
         return $options;
     }
+
+    /**
+     * Method to get the field input markup.
+     *
+     * @return  string  The field input markup.
+     *
+     * @since   __DEPLOY_VERSION__
+     */
+    protected function getInput()
+    {
+        $data = $this->getLayoutData();
+
+        // Pass the exact variables the categoryedit layout expects
+        $data['options']        = $this->getOptions();
+        $data['allowCustom']    = $this->allowAdd;
+        $data['customPrefix']   = $this->customPrefix;
+        $data['refreshPage']    = (bool) ($this->element['refresh-enabled'] ?? false);
+        $data['refreshCatId']   = (string) ($this->element['refresh-cat-id'] ?? '');
+        $data['refreshSection'] = (string) ($this->element['refresh-section'] ?? '');
+
+        $renderer = $this->getRenderer($this->layout);
+        $renderer->setComponent('com_categories');
+        $renderer->setClient(1);
+
+        $html = $renderer->render($data);
+
+        // Load external JS and pass the field id
+        if ($data['refreshPage']) {
+            $wa = Factory::getApplication()->getDocument()->getWebAssetManager();
+
+            // Register and attach the external JS file
+            $wa->registerAndUseScript('field.secondary-category-change', 'layouts/joomla/form/field/secondary-category-change.min.js', [], ['defer' => true], ['core']);
+
+            // pass the specific field ID to the external JS file
+            Factory::getApplication()->getDocument()->addScriptOptions('secondary-category-change', $this->id);
+        }
+
+        return $html;
+    }
+
 }

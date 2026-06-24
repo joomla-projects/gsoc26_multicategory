@@ -406,9 +406,9 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
                 $item->tags->getTagIds($item->id, 'com_content.article');
 
                 $item->secondary_categories = $this->getCurrentSecondaryCategories($item->id);
-
-                $item->featured_up   = null;
-                $item->featured_down = null;
+                $item->fieldscatid          = array_values(array_unique(array_merge([(int) $item->catid], $item->secondary_categories)));
+                $item->featured_up          = null;
+                $item->featured_down        = null;
 
                 if ($item->featured) {
                     // Get featured dates.
@@ -512,6 +512,16 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
 
             // Store ID of the category uses for edit state permission check
             $record->catid = $assignedCatids;
+
+            // Activate the reload of the form when secondary categories are changed
+            if ($form->getField('secondary_categories')) {
+                $assignedSecondaryCatids = $data['secondary_categories'] ?? $form->getValue('secondary_categories');
+                $assignedSecondaryCatids = \is_array($assignedSecondaryCatids) ? implode(',', $assignedSecondaryCatids) : (string) $assignedSecondaryCatids;
+
+                $form->setFieldAttribute('secondary_categories', 'refresh-enabled', true);
+                $form->setFieldAttribute('secondary_categories', 'refresh-cat-id', $assignedSecondaryCatids);
+                $form->setFieldAttribute('secondary_categories', 'refresh-section', 'article');
+            }
         } else {
             // Get the category which the article is being added to
             if (!empty($data['catid'])) {
@@ -650,6 +660,13 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     public function save($data)
     {
+        // We must detect this and force it to an empty array so the old mappings get deleted.
+        $form = $this->loadForm('com_content.article', 'article', ['control' => 'jform', 'load_data' => false]);
+
+        if ($form->getField('secondary_categories') && !isset($data['secondary_categories'])) {
+            $data['secondary_categories'] = [];
+        }
+
         $app    = Factory::getApplication();
         $input  = $app->getInput();
         $filter = InputFilter::getInstance();
