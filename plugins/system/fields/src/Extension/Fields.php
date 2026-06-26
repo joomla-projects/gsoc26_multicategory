@@ -140,6 +140,10 @@ final class Fields extends CMSPlugin implements SubscriberInterface
         // Compile the right context for the fields
         $context = $parts[0] . '.' . $parts[1];
 
+        if (\array_key_exists('secondary_categories', $data)) {
+            $item->secondary_categories = $data['secondary_categories'];
+        }
+
         // Loading the fields
         $fields = FieldsHelper::getFields($context, $item);
 

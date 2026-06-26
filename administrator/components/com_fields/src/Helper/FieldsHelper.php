@@ -49,6 +49,81 @@ class FieldsHelper
     private static $fieldCache = null;
 
     /**
+     * Gets the category ids which should be used for field assignment checks.
+     *
+     * @param   object  $item  The item data
+     *
+     * @return  integer[]
+     *
+     * @since   __DEPLOY_VERSION__
+     */
+    private static function getAssignedCategoryIds($item): array
+    {
+        $assignedCatIds = [];
+
+        foreach (['catid', 'fieldscatid', 'secondary_categories'] as $property) {
+            if (!isset($item->{$property})) {
+                continue;
+            }
+
+            $assignedCatIds = array_merge($assignedCatIds, self::normaliseCategoryIds($item->{$property}));
+        }
+
+        return array_values(array_unique($assignedCatIds));
+    }
+
+    /**
+     * Normalises category ids.
+     *
+     * @param   mixed  $value  Category ids or category objects
+     *
+     * @return  integer[]
+     *
+     * @since   __DEPLOY_VERSION__
+     */
+    private static function normaliseCategoryIds($value): array
+    {
+        if ($value === null || $value === '') {
+            return [];
+        }
+
+        if ($value instanceof \Traversable) {
+            $value = iterator_to_array($value);
+        }
+
+        if (\is_object($value)) {
+            return isset($value->id) ? self::normaliseCategoryIds($value->id) : [];
+        }
+
+        if (!\is_array($value)) {
+            $value = explode(',', (string) $value);
+        }
+
+        $ids = [];
+
+        foreach ($value as $category) {
+            if ($category instanceof \Traversable) {
+                $category = iterator_to_array($category);
+            }
+
+            if (\is_object($category)) {
+                $category = $category->id ?? null;
+            }
+
+            if (\is_array($category)) {
+                $ids = array_merge($ids, self::normaliseCategoryIds($category));
+                continue;
+            }
+
+            if (is_numeric($category)) {
+                $ids[] = (int) $category;
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
      * Extracts the component and section from the context string which has to
      * be in the format component.context.
      *
@@ -145,12 +220,8 @@ class FieldsHelper
          * If item has assigned_cat_ids parameter display only fields which
          * belong to the category
          */
-        if ($item && (isset($item->catid) || isset($item->fieldscatid))) {
-            $assignedCatIds = $item->fieldscatid ?? $item->catid;
-
-            if (!\is_array($assignedCatIds)) {
-                $assignedCatIds = explode(',', $assignedCatIds);
-            }
+        if ($item && (isset($item->catid) || isset($item->fieldscatid) || isset($item->secondary_categories))) {
+            $assignedCatIds = self::getAssignedCategoryIds($item);
 
             // Fields without any category assigned should show as well
             $assignedCatIds[] = 0;
@@ -326,42 +397,35 @@ class FieldsHelper
         $component = $parts[0];
         $section   = $parts[1];
 
-        $assignedCatids = $data->catid ?? $data->fieldscatid ?? $form->getValue('catid');
+        $assignedCatids = self::getAssignedCategoryIds($data);
+        $refreshCatid   = $assignedCatids[0] ?? 0;
 
-        // Account for case that a submitted form has a multi-value category id field (e.g. a filtering form), just use the first category
-        $assignedCatids = \is_array($assignedCatids)
-            ? (int) reset($assignedCatids)
-            : (int) $assignedCatids;
+        if (!$refreshCatid && $formField = $form->getField('catid')) {
+            $refreshCatid = (int) $formField->getAttribute('default', null);
 
-        if (!$assignedCatids && $formField = $form->getField('catid')) {
-            $assignedCatids = $formField->getAttribute('default', null);
-
-            if (!$assignedCatids) {
+            if (!$refreshCatid) {
                 // Choose the first category available
                 $catOptions = $formField->options;
 
                 if ($catOptions && !empty($catOptions[0]->value)) {
-                    $assignedCatids = (int) $catOptions[0]->value;
+                    $refreshCatid = (int) $catOptions[0]->value;
                 }
             }
 
-            $data->fieldscatid = $assignedCatids;
+            if ($refreshCatid) {
+                $assignedCatids[] = $refreshCatid;
+            }
         }
 
-        // Ensure fieldscatid is initialized with the primary category if it wasn't set yet (happens on form reload)
-        if (!isset($data->fieldscatid) && $assignedCatids) {
-            $data->fieldscatid = $assignedCatids;
+        if ($form->getField('secondary_categories')) {
+            $assignedCatids = array_merge(
+                $assignedCatids,
+                self::normaliseCategoryIds($form->getValue('secondary_categories'))
+            );
         }
 
-        // Merge secondary categories into fieldscatid so getFields() loads fields for BOTH primary and secondary
-        $secondaryCatIds = $data->secondary_categories ?? $form->getValue('secondary_categories');
-        if (!empty($secondaryCatIds)) {
-            $secondaryArray = \is_array($secondaryCatIds) ? $secondaryCatIds : explode(',', $secondaryCatIds);
-            $primaryArray   = \is_array($data->fieldscatid) ? $data->fieldscatid : [(int) $data->fieldscatid];
-
-            // Merge and remove duplicates so we don't load the same custom field twice
-            $data->fieldscatid = array_values(array_unique(array_merge($primaryArray, $secondaryArray)));
-        }
+        $assignedCatids = array_values(array_unique($assignedCatids));
+        $refreshCatid   = $refreshCatid ?: ($assignedCatids[0] ?? 0);
 
         /*
          * If there is a catid field we need to reload the page when the catid
@@ -372,7 +436,7 @@ class FieldsHelper
              * Setting some parameters for the category field
              */
             $form->setFieldAttribute('catid', 'refresh-enabled', true);
-            $form->setFieldAttribute('catid', 'refresh-cat-id', $assignedCatids);
+            $form->setFieldAttribute('catid', 'refresh-cat-id', $refreshCatid);
             $form->setFieldAttribute('catid', 'refresh-section', $section);
         }
 
@@ -395,8 +459,10 @@ class FieldsHelper
          * pass fieldscatid = 0 so getFields only returns globally unassigned fields,
          * instead of all fields regardless of category assignment.
          */
-        if (!$assignedCatids && !isset($data->catid) && !isset($data->fieldscatid)) {
+        if (!$assignedCatids && !isset($data->catid) && !isset($data->fieldscatid) && !isset($data->secondary_categories)) {
             $data->fieldscatid = 0;
+        } elseif ($assignedCatids) {
+            $data->fieldscatid = $assignedCatids;
         }
 
         // Getting the fields

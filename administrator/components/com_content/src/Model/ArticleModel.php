@@ -96,17 +96,6 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
     protected $event_after_change_featured = null;
 
     /**
-     * Secondary categories available during the current save operation.
-     *
-     * Used to expose all assigned categories to the Fields plugin before the
-     * article is stored.
-     *
-     * @var    array<int>
-     * @since  __DEPLOY_VERSION__
-     */
-    private array $runtimeSecondaryCategories = [];
-
-    /**
      * Constructor.
      *
      * @param   array                  $config       An array of configuration options (name, state, dbo, table_path, ignore_request).
@@ -349,15 +338,6 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     protected function prepareTable($table)
     {
-          $table->fieldscatid = array_values(
-            array_unique(
-                array_merge(
-                    [(int) $table->catid],
-                    $this->runtimeSecondaryCategories
-                )
-            )
-        );
-
         // Set the publish date to now
         if ($table->state == Workflow::CONDITION_PUBLISHED && (int) $table->publish_up == 0) {
             $table->publish_up = Factory::getDate()->toSql();
@@ -426,7 +406,6 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
                 $item->tags->getTagIds($item->id, 'com_content.article');
 
                 $item->secondary_categories = $this->getCurrentSecondaryCategories($item->id);
-                $item->fieldscatid          = array_values(array_unique(array_merge([(int) $item->catid], $item->secondary_categories)));
                 $item->featured_up          = null;
                 $item->featured_down        = null;
 
@@ -533,15 +512,6 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             // Store ID of the category uses for edit state permission check
             $record->catid = $assignedCatids;
 
-            // Activate the reload of the form when secondary categories are changed
-            if ($form->getField('secondary_categories')) {
-                $assignedSecondaryCatids = $data['secondary_categories'] ?? $form->getValue('secondary_categories');
-                $assignedSecondaryCatids = \is_array($assignedSecondaryCatids) ? implode(',', $assignedSecondaryCatids) : (string) $assignedSecondaryCatids;
-
-                $form->setFieldAttribute('secondary_categories', 'refresh-enabled', true);
-                $form->setFieldAttribute('secondary_categories', 'refresh-cat-id', $assignedSecondaryCatids);
-                $form->setFieldAttribute('secondary_categories', 'refresh-section', 'article');
-            }
         } else {
             // Get the category which the article is being added to
             if (!empty($data['catid'])) {
@@ -826,8 +796,8 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
         }
 
         if (\array_key_exists('secondary_categories', $data)) {
+            $data['secondary_categories']     = $this->createSecondaryCategories($data);
             $data['secondary_categories']     = $this->normalizeSecondaryCategories($data);
-            $this->runtimeSecondaryCategories = $data['secondary_categories'];
         }
 
         if (parent::save($data)) {
@@ -1053,9 +1023,11 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
     {
         if ($this->canCreateCategory()) {
             $form->setFieldAttribute('catid', 'allowAdd', 'true');
+            $form->setFieldAttribute('secondary_categories', 'allowAdd', 'true');
 
             // Add a prefix for categories created on the fly.
             $form->setFieldAttribute('catid', 'customPrefix', '#new#');
+            $form->setFieldAttribute('secondary_categories', 'customPrefix', '#new#');
         }
 
         // Association content items
@@ -1290,6 +1262,62 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
         $hiddenIds = array_diff($currentIds, $manageableIds);
 
         return array_values(array_unique(array_diff(array_merge($submitted, $hiddenIds), [$primaryCategoryId])));
+    }
+
+    /**
+     * Create new secondary categories submitted from the fancy select field.
+     *
+     * @param   array  $data  The form data.
+     *
+     * @return  array  Category ids and existing values
+     *
+     * @since   __DEPLOY_VERSION__
+     *
+     * @throws  \RuntimeException
+     */
+    private function createSecondaryCategories(array $data): array
+    {
+        $categories = (array) ($data['secondary_categories'] ?? []);
+
+        foreach ($categories as $key => $categoryId) {
+            if (is_numeric($categoryId) && CategoriesHelper::validateCategoryId($categoryId, 'com_content')) {
+                continue;
+            }
+
+            if (!\is_string($categoryId) || !str_starts_with($categoryId, '#new#') || !$this->canCreateCategory()) {
+                unset($categories[$key]);
+                continue;
+            }
+
+            $title = trim(substr($categoryId, 5));
+
+            if ($title === '') {
+                unset($categories[$key]);
+                continue;
+            }
+
+            $category = [
+                'title'     => $title,
+                'parent_id' => 1,
+                'extension' => 'com_content',
+                'language'  => $data['language'] ?? '*',
+                'published' => 1,
+            ];
+
+            /** @var \Joomla\Component\Categories\Administrator\Model\CategoryModel $categoryModel */
+            $categoryModel = Factory::getApplication()->bootComponent('com_categories')
+                ->getMVCFactory()->createModel('Category', 'Administrator', ['ignore_request' => true]);
+
+            try {
+                $categoryModel->save($category);
+            } catch (\Throwable $e) {
+                throw new \RuntimeException('Failed to create secondary category "' . $category['title'] . '"');
+            }
+
+            $categories[$key] = $categoryModel->getState('category.id');
+        }
+
+        return $categories;
     }
 
     /**
