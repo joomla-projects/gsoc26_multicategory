@@ -511,7 +511,6 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
 
             // Store ID of the category uses for edit state permission check
             $record->catid = $assignedCatids;
-
         } else {
             // Get the category which the article is being added to
             if (!empty($data['catid'])) {
@@ -796,8 +795,8 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
         }
 
         if (\array_key_exists('secondary_categories', $data)) {
-            $data['secondary_categories']     = $this->createSecondaryCategories($data);
-            $data['secondary_categories']     = $this->normalizeSecondaryCategories($data);
+            $data['secondary_categories'] = $this->createSecondaryCategories($data);
+            $data['secondary_categories'] = $this->normalizeSecondaryCategories($data);
         }
 
         if (parent::save($data)) {
