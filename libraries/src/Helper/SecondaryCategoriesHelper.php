@@ -195,7 +195,7 @@ class SecondaryCategoriesHelper extends CMSHelper
 
         foreach ($items as $item) {
             if (!empty($item->id)) {
-                $itemIds[] = (int) $item->id;
+                $itemIds[]                  = (int) $item->id;
                 $item->secondary_categories = [];
             }
         }
