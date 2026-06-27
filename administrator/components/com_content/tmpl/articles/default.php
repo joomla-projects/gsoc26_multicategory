@@ -326,11 +326,13 @@ $assoc = Associations::isEnabled();
                                             <?php if (!empty($item->secondary_categories)) : ?>
                                                 <br>
                                                 <?php
-                                                if (count($item->secondary_categories) > 1)
-                                                    echo Text::_('JSECONDARY_CATEGORIES') . ': ';
-                                                else
-                                                    echo Text::_('JSECONDARY_CATEGORY') . ': ';
+                                                echo Text::_(
+                                                    count($item->secondary_categories) > 1
+                                                        ? 'JSECONDARY_CATEGORIES'
+                                                        : 'JSECONDARY_CATEGORY'
+                                                ) . ': ';
                                                 ?>
+
                                                 <?php foreach ($item->secondary_categories as $index => $category) : ?>
                                                     <?php
                                                     $canEditSecondaryCat = $user->authorise('core.edit', 'com_content.category.' . $category->id);
@@ -359,7 +361,6 @@ $assoc = Associations::isEnabled();
                                                     <?php endif; ?>
 
                                                     <?php if ($this->getLanguage()->isRtl()) : ?>
-
                                                         <?php if ($canEditSecondaryCat || $canEditOwnSecondaryCat) : ?>
                                                             <a href="<?php echo $secondaryCurrentCatUrl; ?>" title="<?php echo $EditCatTxt; ?>">
                                                         <?php endif; ?>
@@ -382,13 +383,10 @@ $assoc = Associations::isEnabled();
                                                             <?php if ($canEditSecondaryParentCat || $canEditOwnSecondaryParentCat) : ?>
                                                                 </a>
                                                             <?php endif; ?>
-
                                                         <?php endif; ?>
 
                                                     <?php else : ?>
-
                                                         <?php if ($category->category_level != 1) : ?>
-
                                                             <?php if ($canEditSecondaryParentCat || $canEditOwnSecondaryParentCat) : ?>
                                                                 <a href="<?php echo $secondaryParentCatUrl; ?>" title="<?php echo $EditCatTxt; ?>">
                                                             <?php endif; ?>
@@ -400,7 +398,6 @@ $assoc = Associations::isEnabled();
                                                             <?php endif; ?>
 
                                                             &#187;
-
                                                         <?php endif; ?>
 
                                                         <?php if ($canEditSecondaryCat || $canEditOwnSecondaryCat) : ?>
@@ -412,7 +409,6 @@ $assoc = Associations::isEnabled();
                                                         <?php if ($canEditSecondaryCat || $canEditOwnSecondaryCat) : ?>
                                                             </a>
                                                         <?php endif; ?>
-
                                                     <?php endif; ?>
 
                                                     <?php if ($category->category_published < 1) : ?>
