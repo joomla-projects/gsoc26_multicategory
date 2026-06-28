@@ -233,12 +233,11 @@ class SecondaryCategoriesHelper extends CMSHelper
             ->bind(':context', $this->typeAlias, ParameterType::STRING);
 
         $relations = $db->setQuery($query)->loadObjectList();
-
         foreach ($relations as $relation) {
             $counts[(int) $relation->catid][self::COUNTER_NAMES[(int) $relation->state]] = (int) $relation->count;
         }
-
         return $counts;
+    }
 
     /**
      * Load secondary categories for the given items.
@@ -325,6 +324,5 @@ class SecondaryCategoriesHelper extends CMSHelper
         foreach ($items as $item) {
             $item->secondary_categories = $mapped[$item->id] ?? [];
         }
-
     }
 }
