@@ -186,7 +186,7 @@ class SecondaryCategoriesHelper extends CMSHelper
 
         return array_map('intval', $db->setQuery($query)->loadColumn());
     }
-    
+
     /**
      * Get the number of related items for each secondary category grouped by state.
      *
