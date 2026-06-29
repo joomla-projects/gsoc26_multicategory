@@ -203,7 +203,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
         $oldItem = $this->getTable();
         $oldItem->load($oldId);
         $oldItem->secondary_categories = $secondaryCategories;
-        $fields = FieldsHelper::getFields('com_content.article', $oldItem, true);
+        $fields                        = FieldsHelper::getFields('com_content.article', $oldItem, true);
 
         $fieldsData = [];
 
