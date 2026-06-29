@@ -364,7 +364,7 @@ final class Content extends Adapter implements SubscriberInterface
                 );
             }
         }
-        
+
         // Add the language taxonomy data.
         if (\in_array('language', $taxonomies)) {
             $item->addTaxonomy('Language', $item->language);

@@ -895,7 +895,7 @@ final class Joomla extends CMSPlugin implements SubscriberInterface
     {
         $db    = $this->getDatabase();
         $query = $db->createQuery();
-        
+
         //@todo Remove the condition with the else when all items fullly support secondary categories.
         if ($table === '#__content') {
             $context        = 'com_content.article';
