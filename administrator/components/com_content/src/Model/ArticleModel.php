@@ -169,8 +169,40 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
 
         $this->workflowCleanupBatchMove($oldId, $newId);
 
+        $secondaryCategories = array_values(array_diff(
+            $this->getCurrentSecondaryCategories((int) $oldId),
+            [(int) $table->catid]
+        ));
+
+        if ($secondaryCategories) {
+            $db    = $this->getDatabase();
+            $query = $db->createQuery()
+                ->insert($db->quoteName('#__category_item_map'))
+                ->columns([
+                    $db->quoteName('context'),
+                    $db->quoteName('item_id'),
+                    $db->quoteName('category_id'),
+                    $db->quoteName('ordering'),
+                ]);
+
+            foreach ($secondaryCategories as $ordering => $categoryId) {
+                $query->values(
+                    implode(
+                        ',',
+                        $query->bindArray(
+                            [$this->typeAlias, $newId, $categoryId, $ordering],
+                            [ParameterType::STRING, ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::INTEGER]
+                        )
+                    )
+                );
+            }
+
+            $db->setQuery($query)->execute();
+        }
+
         $oldItem = $this->getTable();
         $oldItem->load($oldId);
+        $oldItem->secondary_categories = $secondaryCategories;
         $fields = FieldsHelper::getFields('com_content.article', $oldItem, true);
 
         $fieldsData = [];
@@ -182,6 +214,8 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
                 $fieldsData['com_fields'][$field->name] = $field->rawvalue;
             }
         }
+
+        $this->table->secondary_categories = $secondaryCategories;
 
         Factory::getApplication()->triggerEvent('onContentAfterSave', ['com_content.article', &$this->table, false, $fieldsData]);
     }
@@ -238,6 +272,10 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
                 continue;
             }
 
+            $this->table->secondary_categories = array_values(array_diff(
+                $this->getCurrentSecondaryCategories((int) $pk),
+                [$categoryId]
+            ));
             $fields = FieldsHelper::getFields('com_content.article', $this->table, true);
 
             $fieldsData = [];
@@ -252,6 +290,11 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
 
             // Set the new category ID
             $this->table->catid = $categoryId;
+
+            $this->saveSecondaryCategories([
+                'id'                   => $pk,
+                'secondary_categories' => $this->table->secondary_categories,
+            ]);
 
             // We don't want to modify tags - so remove the associated tags helper
             if ($this->table instanceof TaggableTableInterface) {
@@ -1324,7 +1367,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     private function saveSecondaryCategories(array $data): void
     {
-        $itemId    = (int) $this->getState($this->getName() . '.id');
+        $itemId    = (int) ($data['id'] ?? $this->getState($this->getName() . '.id'));
         $submitted =  $data['secondary_categories'] ?? [];
 
         $db = $this->getDatabase();
