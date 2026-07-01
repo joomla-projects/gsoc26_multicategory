@@ -150,7 +150,6 @@ class SecondaryCategoriesHelper extends CMSHelper
     /**
      * Build the primary category condition portion.
      *
-     * @param   DatabaseInterface  $db                   The database driver.
      * @param   string             $catidColumn          The quoted catid column name.
      * @param   string             $boundedIds           Comma-separated bounded IDs.
      * @param   array              $categoryIds          The category IDs array.
@@ -292,13 +291,14 @@ class SecondaryCategoriesHelper extends CMSHelper
     /**
      * Get the number of related items for each secondary category grouped by state.
      *
-     * @param   int[]  $categoryIds  The category ids.
+     * @param   int[]   $categoryIds  The category ids.
+     * @param   string  $itemTable    The database table name for the items (e.g. '#__content').
      *
      * @return  array<int, array<string, int>>
      *
      * @since   __DEPLOY_VERSION__
      */
-    public function getCategoryItemCounts(array $categoryIds): array
+    public function getCategoryItemCounts(array $categoryIds, string $itemTable): array
     {
         if (empty($categoryIds)) {
             return [];
@@ -324,14 +324,14 @@ class SecondaryCategoriesHelper extends CMSHelper
             )
             ->from($db->quoteName('#__category_item_map', 'm'))
             ->innerJoin(
-                $db->quoteName('#__content', 'c'),
+                $db->quoteName($itemTable, 'c'),
                 $db->quoteName('c.id') . ' = ' . $db->quoteName('m.item_id')
             )
-            ->where($db->quoteName('m.context') . ' = :context')
+            ->where($db->quoteName('m.context') . ' = :countContext')
             ->whereIn($db->quoteName('m.category_id'), $categoryIds)
             ->whereIn($db->quoteName('c.state'), array_keys(self::COUNTER_NAMES))
             ->group($db->quoteName(['m.category_id', 'c.state']))
-            ->bind(':context', $this->typeAlias, ParameterType::STRING);
+            ->bind(':countContext', $this->typeAlias, ParameterType::STRING);
 
         $relations = $db->setQuery($query)->loadObjectList();
         foreach ($relations as $relation) {
