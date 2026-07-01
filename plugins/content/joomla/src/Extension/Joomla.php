@@ -897,7 +897,7 @@ final class Joomla extends CMSPlugin implements SubscriberInterface
         $db    = $this->getDatabase();
         $query = $db->createQuery();
 
-        // @todo Remove the condition with the else when all items fully support secondary categories nd make the context Generic.
+        // @todo Remove the condition with the else when all items fully support secondary categories and make the context Generic.
         if ($table === '#__content') {
             // Reuse the centralized helper to check primary AND secondary mappings
             $helper    = new SecondaryCategoriesHelper('com_content.article');
@@ -1013,7 +1013,7 @@ final class Joomla extends CMSPlugin implements SubscriberInterface
                 return 0;
             }
 
-            // @todo Remove the condition with the else when all items fully support secondary categories nd make the context Generic.
+            // @todo Remove the condition with the else when all items fully support secondary categories and make the context Generic.
             if ($table === '#__content') {
                 // Reuse the centralized helper to check primary AND secondary mappings
                 $helper    = new SecondaryCategoriesHelper('com_content.article');
