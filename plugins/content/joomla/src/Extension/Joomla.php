@@ -18,6 +18,7 @@ use Joomla\CMS\Event\Model\BeforeDeleteEvent;
 use Joomla\CMS\Event\Model\BeforeSaveEvent;
 use Joomla\CMS\Event\Plugin\System\Schemaorg\BeforeCompileHeadEvent;
 use Joomla\CMS\Factory;
+use Joomla\CMS\Helper\SecondaryCategoriesHelper;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Log\Log;
@@ -896,11 +897,23 @@ final class Joomla extends CMSPlugin implements SubscriberInterface
         $db    = $this->getDatabase();
         $query = $db->createQuery();
 
-        // Count the items in this category
-        $query->select('COUNT(' . $db->quoteName('id') . ')')
-            ->from($db->quoteName($table))
-            ->where($db->quoteName('catid') . ' = :catid')
-            ->bind(':catid', $catid, ParameterType::INTEGER);
+        // @todo Remove the condition with the else when all items fully support secondary categories nd make the context Generic.
+        if ($table === '#__content') {
+            // Reuse the centralized helper to check primary AND secondary mappings
+            $helper    = new SecondaryCategoriesHelper('com_content.article');
+            $condition = $helper->buildCategoryMembershipCondition([(int) $catid], false, true, 1, 'a');
+
+            $query->select('COUNT(DISTINCT ' . $db->quoteName('a.id') . ')')
+                ->from($db->quoteName($table, 'a'))
+                ->where($condition);
+        } else {
+            // Count the items in this category
+            $query->select('COUNT(' . $db->quoteName('id') . ')')
+                ->from($db->quoteName($table))
+                ->where($db->quoteName('catid') . ' = :catid')
+                ->bind(':catid', $catid, ParameterType::INTEGER);
+        }
+
         $db->setQuery($query);
 
         try {
@@ -994,11 +1007,30 @@ final class Joomla extends CMSPlugin implements SubscriberInterface
 
         // Make sure we only do the query if we have some categories to look in
         if (\count($childCategoryIds)) {
-            // Count the items in this category
-            $query = $db->createQuery()
-                ->select('COUNT(' . $db->quoteName('id') . ')')
-                ->from($db->quoteName($table))
-                ->whereIn($db->quoteName('catid'), $childCategoryIds);
+            $childCategoryIds = SecondaryCategoriesHelper::normalizeCategoryIds($childCategoryIds);
+
+            if (!$childCategoryIds) {
+                return 0;
+            }
+
+            // @todo Remove the condition with the else when all items fully support secondary categories nd make the context Generic.
+            if ($table === '#__content') {
+                // Reuse the centralized helper to check primary AND secondary mappings
+                $helper    = new SecondaryCategoriesHelper('com_content.article');
+                $condition = $helper->buildCategoryMembershipCondition($childCategoryIds, false, true, 1, 'a');
+
+                $query = $db->createQuery()
+                    ->select('COUNT(DISTINCT ' . $db->quoteName('a.id') . ')')
+                    ->from($db->quoteName($table, 'a'))
+                    ->where($condition);
+            } else {
+                // Count the items in this category
+                $query = $db->createQuery()
+                    ->select('COUNT(' . $db->quoteName('id') . ')')
+                    ->from($db->quoteName($table))
+                    ->whereIn($db->quoteName('catid'), $childCategoryIds);
+            }
+
             $db->setQuery($query);
 
             try {
