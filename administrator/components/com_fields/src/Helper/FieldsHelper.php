@@ -146,9 +146,9 @@ class FieldsHelper
          * belong to the category
          */
         if ($item && isset($item->fieldscatid)) {
-            self::$fieldsCache->setState('filter.assigned_cat_ids',array_merge($item->fieldscatid, [0]));
+            self::$fieldsCache->setState('filter.assigned_cat_ids', array_merge($item->fieldscatid, [0]));
         } elseif ($item && isset($item->catid)) {
-            self::$fieldsCache->setState('filter.assigned_cat_ids',[$item->catid, 0]);
+            self::$fieldsCache->setState('filter.assigned_cat_ids', [$item->catid, 0]);
         }
 
         $fields = self::$fieldsCache->getItems();

@@ -157,7 +157,6 @@ class CategoryMultipleField extends CategoryeditField
 
         // Load external JS and pass the field id
         if ($data['refreshPage']) {
-
             $document = Factory::getApplication()->getDocument();
             $wa       = $document->getWebAssetManager();
 
