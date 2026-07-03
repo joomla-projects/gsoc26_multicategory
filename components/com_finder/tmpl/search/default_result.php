@@ -125,7 +125,7 @@ if ($this->params->get('show_url', 1)) {
                                 echo Text::_($label);
                                 ?>:
                             </span>
-                            <?php echo implode(', ', $taxonomy_text); ?>
+                            <?php echo $this->escape(implode(', ', $taxonomy_text)); ?>
                         </li>
                     <?php endif; ?>
                 <?php endif; ?>

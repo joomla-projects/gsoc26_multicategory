@@ -202,8 +202,10 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
 
         $oldItem = $this->getTable();
         $oldItem->load($oldId);
-        $oldItem->secondary_categories = $secondaryCategories;
-        $fields                        = FieldsHelper::getFields('com_content.article', $oldItem, true);
+        $combinedCategories   = array_values(array_merge([(int) $table->catid], $secondaryCategories));
+        $oldItem->fieldscatid = $combinedCategories;
+
+        $fields = FieldsHelper::getFields('com_content.article', $oldItem, true);
 
         $fieldsData = [];
 
@@ -215,12 +217,11 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             }
         }
 
-        $this->table->secondary_categories = $secondaryCategories;
-
+        $this->table->fieldscatid = $combinedCategories;
         Factory::getApplication()->triggerEvent('onContentAfterSave', ['com_content.article', &$this->table, false, $fieldsData]);
     }
 
-    /**
+/**
      * Batch move categories to a new category.
      *
      * @param   integer  $value     The new category ID.
@@ -272,10 +273,15 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
                 continue;
             }
 
+            // Get current secondary categories and filter out the new primary category if it matches
             $this->table->secondary_categories = array_values(array_diff(
                 $this->getCurrentSecondaryCategories((int) $pk),
                 [$categoryId]
             ));
+
+            $combinedCategories = array_values(array_merge([(int) $this->table->catid], $this->table->secondary_categories));
+            $this->table->fieldscatid = $combinedCategories;
+
             $fields = FieldsHelper::getFields('com_content.article', $this->table, true);
 
             $fieldsData = [];
@@ -288,9 +294,10 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
                 }
             }
 
-            // Set the new category ID
+            // Set the new primary category ID
             $this->table->catid = $categoryId;
 
+            // Save the updated secondary categories layout (without the new primary catid)
             $this->saveSecondaryCategories([
                 'id'                   => $pk,
                 'secondary_categories' => $this->table->secondary_categories,
@@ -314,6 +321,8 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
 
                 return false;
             }
+
+            $this->table->fieldscatid = array_values(array_merge([$categoryId], $this->table->secondary_categories));
 
             // Run event for moved article
             Factory::getApplication()->triggerEvent('onContentAfterSave', ['com_content.article', &$this->table, false, $fieldsData]);
