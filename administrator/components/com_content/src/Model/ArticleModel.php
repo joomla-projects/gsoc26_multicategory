@@ -409,7 +409,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
 
         $app                = Factory::getApplication();
         $secondary          = (array) $app->getInput()->post->get('jform', [], 'array')['secondary_categories'] ?? [];
-        $table->fieldscatid = array_values(array_unique(array_merge([(int) $table->catid], array_map('intval', $secondary))));
+        $table->fieldscatid = array_values(array_merge([(int) $table->catid], array_map('intval', $secondary)));
     }
 
     /**
@@ -667,10 +667,10 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
         }
 
         if (\is_array($data)) {
-            $fieldscatid         = array_unique(array_merge([(int) ($data['catid'] ?? 0)], (array) ($data['secondary_categories'] ?? [])));
+            $fieldscatid         = array_merge([(int) ($data['catid'] ?? 0)], (array) ($data['secondary_categories'] ?? []));
             $data['fieldscatid'] = $fieldscatid;
         } else {
-            $fieldscatid       = array_unique(array_merge([(int) ($data->catid ?? 0)], (array) ($data->secondary_categories ?? [])));
+            $fieldscatid       = array_merge([(int) ($data->catid ?? 0)], (array) ($data->secondary_categories ?? []));
             $data->fieldscatid = $fieldscatid;
         }
 
@@ -702,7 +702,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
 
         if (isset($data['catid'])) {
             $secondary           = $data['secondary_categories'] ?? [];
-            $data['fieldscatid'] = array_values(array_unique(array_merge([(int) $data['catid']], (array) $secondary)));
+            $data['fieldscatid'] = array_values(array_merge([(int) $data['catid']], (array) $secondary));
         }
 
         return parent::validate($form, $data, $group);
@@ -869,7 +869,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             $data['secondary_categories'] = $this->normalizeSecondaryCategories($data);
         }
 
-        $data['fieldscatid']           = array_values(array_unique(array_merge([(int) ($data['catid'] ?? 0)], (array) ($data['secondary_categories'] ?? []))));
+        $data['fieldscatid']           = array_values(array_merge([(int) ($data['catid'] ?? 0)], (array) ($data['secondary_categories'] ?? [])));
         $this->getTable()->fieldscatid = $data['fieldscatid'];
 
         $rawJForm = $app->getInput()->post->get('jform', [], 'array');
