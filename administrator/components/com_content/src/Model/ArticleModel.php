@@ -221,7 +221,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
         Factory::getApplication()->triggerEvent('onContentAfterSave', ['com_content.article', &$this->table, false, $fieldsData]);
     }
 
-/**
+    /**
      * Batch move categories to a new category.
      *
      * @param   integer  $value     The new category ID.
@@ -279,7 +279,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
                 [$categoryId]
             ));
 
-            $combinedCategories = array_values(array_merge([(int) $this->table->catid], $this->table->secondary_categories));
+            $combinedCategories       = array_values(array_merge([(int) $this->table->catid], $this->table->secondary_categories));
             $this->table->fieldscatid = $combinedCategories;
 
             $fields = FieldsHelper::getFields('com_content.article', $this->table, true);
