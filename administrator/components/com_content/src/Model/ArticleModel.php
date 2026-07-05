@@ -170,8 +170,42 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
 
         $this->workflowCleanupBatchMove($oldId, $newId);
 
+        $secondaryCategories = array_values(array_diff(
+            $this->getCurrentSecondaryCategories((int) $oldId),
+            [(int) $table->catid]
+        ));
+
+        if ($secondaryCategories) {
+            $db    = $this->getDatabase();
+            $query = $db->createQuery()
+                ->insert($db->quoteName('#__category_item_map'))
+                ->columns([
+                    $db->quoteName('context'),
+                    $db->quoteName('item_id'),
+                    $db->quoteName('category_id'),
+                    $db->quoteName('ordering'),
+                ]);
+
+            foreach ($secondaryCategories as $ordering => $categoryId) {
+                $query->values(
+                    implode(
+                        ',',
+                        $query->bindArray(
+                            [$this->typeAlias, $newId, $categoryId, $ordering],
+                            [ParameterType::STRING, ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::INTEGER]
+                        )
+                    )
+                );
+            }
+
+            $db->setQuery($query)->execute();
+        }
+
         $oldItem = $this->getTable();
         $oldItem->load($oldId);
+        $combinedCategories   = array_values(array_merge([(int) $table->catid], $secondaryCategories));
+        $oldItem->fieldscatid = $combinedCategories;
+
         $fields = FieldsHelper::getFields('com_content.article', $oldItem, true);
 
         $fieldsData = [];
@@ -184,6 +218,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             }
         }
 
+        $this->table->fieldscatid = $combinedCategories;
         Factory::getApplication()->triggerEvent('onContentAfterSave', ['com_content.article', &$this->table, false, $fieldsData]);
     }
 
@@ -239,6 +274,15 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
                 continue;
             }
 
+            // Get current secondary categories and filter out the new primary category if it matches
+            $this->table->secondary_categories = array_values(array_diff(
+                $this->getCurrentSecondaryCategories((int) $pk),
+                [$categoryId]
+            ));
+
+            $combinedCategories       = array_values(array_merge([(int) $this->table->catid], $this->table->secondary_categories));
+            $this->table->fieldscatid = $combinedCategories;
+
             $fields = FieldsHelper::getFields('com_content.article', $this->table, true);
 
             $fieldsData = [];
@@ -251,8 +295,14 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
                 }
             }
 
-            // Set the new category ID
+            // Set the new primary category ID
             $this->table->catid = $categoryId;
+
+            // Save the updated secondary categories layout (without the new primary catid)
+            $this->saveSecondaryCategories([
+                'id'                   => $pk,
+                'secondary_categories' => $this->table->secondary_categories,
+            ]);
 
             // We don't want to modify tags - so remove the associated tags helper
             if ($this->table instanceof TaggableTableInterface) {
@@ -272,6 +322,8 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
 
                 return false;
             }
+
+            $this->table->fieldscatid = array_values(array_merge([$categoryId], $this->table->secondary_categories));
 
             // Run event for moved article
             Factory::getApplication()->triggerEvent('onContentAfterSave', ['com_content.article', &$this->table, false, $fieldsData]);
@@ -355,6 +407,10 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
         if (empty($table->id)) {
             $table->reorder('catid = ' . (int) $table->catid . ' AND state >= 0');
         }
+
+        $app                = Factory::getApplication();
+        $secondary          = (array) $app->getInput()->post->get('jform', [], 'array')['secondary_categories'] ?? [];
+        $table->fieldscatid = array_values(array_merge([(int) $table->catid], array_map('intval', $secondary)));
     }
 
     /**
@@ -611,6 +667,14 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             $data->params = $data->params->toArray();
         }
 
+        if (\is_array($data)) {
+            $fieldscatid         = array_merge([(int) ($data['catid'] ?? 0)], (array) ($data['secondary_categories'] ?? []));
+            $data['fieldscatid'] = $fieldscatid;
+        } else {
+            $fieldscatid       = array_merge([(int) ($data->catid ?? 0)], (array) ($data->secondary_categories ?? []));
+            $data->fieldscatid = $fieldscatid;
+        }
+
         $this->preprocessData('com_content.article', $data);
 
         return $data;
@@ -637,6 +701,11 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             }
         }
 
+        if (isset($data['catid'])) {
+            $secondary           = $data['secondary_categories'] ?? [];
+            $data['fieldscatid'] = array_values(array_merge([(int) $data['catid']], (array) $secondary));
+        }
+
         return parent::validate($form, $data, $group);
     }
 
@@ -651,6 +720,13 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     public function save($data)
     {
+        // We must detect this and force it to an empty array so the old mappings get deleted.
+        $form = $this->loadForm('com_content.article', 'article', ['control' => 'jform', 'load_data' => false]);
+
+        if ($form->getField('secondary_categories') && !isset($data['secondary_categories'])) {
+            $data['secondary_categories'] = [];
+        }
+
         $app    = Factory::getApplication();
         $input  = $app->getInput();
         $filter = InputFilter::getInstance();
@@ -792,6 +868,16 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
         if (\array_key_exists('secondary_categories', $data)) {
             $data['secondary_categories'] = $this->createSecondaryCategories($data);
             $data['secondary_categories'] = $this->normalizeSecondaryCategories($data);
+        }
+
+        $data['fieldscatid']           = array_values(array_merge([(int) ($data['catid'] ?? 0)], (array) ($data['secondary_categories'] ?? [])));
+        $this->getTable()->fieldscatid = $data['fieldscatid'];
+
+        $rawJForm = $app->getInput()->post->get('jform', [], 'array');
+        if (!empty($rawJForm['com_fields'])) {
+            foreach ($rawJForm['com_fields'] as $fieldName => $fieldValue) {
+                $data['com_fields'][$fieldName] = $fieldValue;
+            }
         }
 
         if (parent::save($data)) {
@@ -1313,7 +1399,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     private function saveSecondaryCategories(array $data): void
     {
-        $itemId    = (int) $this->getState($this->getName() . '.id');
+        $itemId    = (int) ($data['id'] ?? $this->getState($this->getName() . '.id'));
         $submitted = $data['secondary_categories'] ?? [];
 
         if (empty($submitted)) {

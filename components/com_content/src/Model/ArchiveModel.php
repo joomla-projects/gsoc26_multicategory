@@ -129,6 +129,7 @@ class ArchiveModel extends ArticlesModel
             $helper    = new SecondaryCategoriesHelper('com_content.article');
             $condition = $helper->buildCategoryMembershipCondition($catids);
             $query->where($condition);
+
         }
 
         return $query;
