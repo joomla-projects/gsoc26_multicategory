@@ -1415,7 +1415,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     private function saveSecondaryCategories(array $data): void
     {
-        $itemId    = (int) ($data['id'] ?? $this->getState($this->getName() . '.id'));
+        $itemId    = (int) $this->getState($this->getName() . '.id');
         $submitted = $data['secondary_categories'] ?? [];
 
         if (empty($submitted)) {
