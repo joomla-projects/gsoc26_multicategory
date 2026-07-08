@@ -12,10 +12,12 @@ namespace Joomla\Component\Content\Administrator\Model;
 
 use Joomla\CMS\Date\Date;
 use Joomla\CMS\Event\AbstractEvent;
+use Joomla\CMS\Event\Model\AfterSaveEvent;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Filter\InputFilter;
 use Joomla\CMS\Form\Form;
 use Joomla\CMS\Form\FormFactoryInterface;
+use Joomla\CMS\Helper\SecondaryCategoriesHelper;
 use Joomla\CMS\Helper\TagsHelper;
 use Joomla\CMS\Language\Associations;
 use Joomla\CMS\Language\LanguageHelper;
@@ -218,7 +220,16 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
         }
 
         $this->table->fieldscatid = $combinedCategories;
-        Factory::getApplication()->triggerEvent('onContentAfterSave', ['com_content.article', &$this->table, false, $fieldsData]);
+
+        $this->getDispatcher()->dispatch(
+            'onContentAfterSave',
+            new AfterSaveEvent('onContentAfterSave', [
+                'context' => 'com_content.article',
+                'subject' => $this->table,
+                'isNew'   => false,
+                'data'    => $fieldsData,
+            ])
+        );
     }
 
     /**
@@ -249,7 +260,8 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             return false;
         }
 
-        PluginHelper::importPlugin('system');
+        $dispatcher = $this->getDispatcher();
+        PluginHelper::importPlugin('system', null, true, $dispatcher);
 
         // Parent exists so we proceed
         foreach ($pks as $pk) {
@@ -325,7 +337,12 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             $this->table->fieldscatid = array_values(array_merge([$categoryId], $this->table->secondary_categories));
 
             // Run event for moved article
-            Factory::getApplication()->triggerEvent('onContentAfterSave', ['com_content.article', &$this->table, false, $fieldsData]);
+            $dispatcher->dispatch('onContentAfterSave', new AfterSaveEvent('onContentAfterSave', [
+                'context' => 'com_content.article',
+                'subject' => $this->table,
+                'isNew'   => false,
+                'data'    => $fieldsData,
+            ]));
         }
 
         // Clean the cache
@@ -1210,12 +1227,8 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             $db->execute();
 
             // Delete the article from the category mapping table
-            $query = $db->createQuery()
-                ->delete($db->quoteName('#__category_item_map'))
-                ->where($db->quoteName('context') . ' = :context')
-                ->whereIn($db->quoteName('item_id'), $pks)
-                ->bind(':context', $this->typeAlias, ParameterType::STRING);
-            $db->setQuery($query)->execute();
+            $helper = new SecondaryCategoriesHelper($this->typeAlias);
+            $helper->removeAllMappings(...array_map('intval', $pks));
 
             $this->workflow->deleteAssociation($pks);
         }
@@ -1300,17 +1313,9 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     protected function getCurrentSecondaryCategories(int $itemId): array
     {
-        $db = $this->getDatabase();
+        $helper = new SecondaryCategoriesHelper($this->typeAlias);
 
-        $query = $db->createQuery()
-            ->select($db->quoteName('category_id'))
-            ->from($db->quoteName('#__category_item_map'))
-            ->where($db->quoteName('context') . ' = :context')
-            ->where($db->quoteName('item_id') . ' = :itemId')
-            ->bind(':context', $this->typeAlias, ParameterType::STRING)
-            ->bind(':itemId', $itemId, ParameterType::INTEGER);
-
-        return array_map('intval', $db->setQuery($query)->loadColumn());
+        return $helper->getCurrentSecondaryCategoriesByItem($itemId);
     }
 
     /**
@@ -1410,38 +1415,15 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
      */
     private function saveSecondaryCategories(array $data): void
     {
-        $itemId    = (int) $this->getState($this->getName() . '.id');
-        $submitted =  $data['secondary_categories'] ?? [];
-
-        $db = $this->getDatabase();
-
-        // Remove existing mappings.
-        $query = $db->createQuery()
-            ->delete($db->quoteName('#__category_item_map'))
-            ->where($db->quoteName('context') . ' = :context')
-            ->where($db->quoteName('item_id') . ' = :itemId')
-            ->bind(':context', $this->typeAlias, ParameterType::STRING)
-            ->bind(':itemId', $itemId, ParameterType::INTEGER);
-
-        $db->setQuery($query)->execute();
+        $itemId    = (int) ($data['id'] ?? $this->getState($this->getName() . '.id'));
+        $submitted = $data['secondary_categories'] ?? [];
 
         if (empty($submitted)) {
-            return;
+            $submitted = [];
         }
 
-        $query = $db->createQuery()
-            ->insert($db->quoteName('#__category_item_map'))
-            ->columns([
-                $db->quoteName('context'),
-                $db->quoteName('item_id'),
-                $db->quoteName('category_id'),
-                $db->quoteName('ordering'),
-            ]);
-
-        foreach ($submitted as $ordering => $categoryId) {
-            $query->values(implode(',', $query->bindArray([$this->typeAlias, $itemId, $categoryId, $ordering], [ParameterType::STRING, ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::INTEGER])));
-        }
-
-        $db->setQuery($query)->execute();
+        // Use helper to atomically replace mappings (preserves array keys as ordering)
+        $helper = new SecondaryCategoriesHelper($this->typeAlias);
+        $helper->replaceMappings($itemId, $submitted);
     }
 }
