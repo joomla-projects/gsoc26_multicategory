@@ -194,11 +194,7 @@ trait SecondaryCategoriesSaveTrait
      */
     private function saveSecondaryCategories(array $data): void
     {
-        $itemId = (int) ($data['id'] ?? 0);
-
-        if (!$itemId) {
-            $itemId = (int) $this->getState($this->getName() . '.id');
-        }
+        $itemId = (int) $this->getState($this->getName() . '.id');
 
         $submitted = $data['secondary_categories'] ?? [];
 
