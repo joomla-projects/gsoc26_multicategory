@@ -11,7 +11,6 @@
 namespace Joomla\CMS\Helper;
 
 use Joomla\CMS\Factory;
-use Joomla\CMS\Helper\SecondaryCategoriesHelper;
 use Joomla\Component\Categories\Administrator\Helper\CategoriesHelper;
 use Joomla\Database\ParameterType;
 

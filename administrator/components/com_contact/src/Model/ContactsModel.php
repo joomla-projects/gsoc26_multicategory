@@ -368,10 +368,10 @@ class ContactsModel extends ListModel
 
         // Case: Using both categories filter and by level filter
         if (\count($categoryId)) {
-            $categoryId       = ArrayHelper::toInteger($categoryId);
-            $categoryMatch    = (string) $this->getState('filter.category_match', '');
-            $categoryTable    = new Category($db);
-            $subCatItemsWhere = [];
+            $categoryId          = ArrayHelper::toInteger($categoryId);
+            $categoryMatch       = (string) $this->getState('filter.category_match', '');
+            $categoryTable       = new Category($db);
+            $subCatItemsWhere    = [];
             $secondaryWhereParts = [];
 
             // @todo: Convert to prepared statement

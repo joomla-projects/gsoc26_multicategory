@@ -368,7 +368,7 @@ class CategoryModel extends ListModel
             $options['countItems']                 = $params->get('show_cat_items', 1) || $params->get('show_empty_categories', 0);
             $options['includeSecondaryCategories'] = (bool) $params->get('include_secondary_categories', 1);
             $categories                            = Categories::getInstance('Contact', $options);
-            $this->_item           = $categories->get($this->getState('category.id', 'root'));
+            $this->_item                           = $categories->get($this->getState('category.id', 'root'));
 
             if (\is_object($this->_item)) {
                 $this->_children = $this->_item->getChildren();

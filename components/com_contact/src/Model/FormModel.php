@@ -139,7 +139,7 @@ class FormModel extends \Joomla\Component\Contact\Administrator\Model\ContactMod
         if ($itemId) {
             $value->tags = new TagsHelper();
             $value->tags->getTagIds($value->id, 'com_contact.contact');
-            $value->metadata['tags'] = $value->tags;
+            $value->metadata['tags']     = $value->tags;
             $value->secondary_categories = $this->getCurrentSecondaryCategories($value->id);
         }
 

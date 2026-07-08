@@ -116,7 +116,7 @@ class ContactModel extends AdminModel implements VersionableModelInterface
 
         $combinedCategories   = array_values(array_merge([(int) $table->catid], $secondaryCategories));
         $oldItem->fieldscatid = $combinedCategories;
-        $fields = FieldsHelper::getFields('com_contact.contact', $oldItem, true);
+        $fields               = FieldsHelper::getFields('com_contact.contact', $oldItem, true);
 
         $fieldsData = [];
 
