@@ -14,6 +14,7 @@ use Joomla\CMS\Application\SiteApplication;
 use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Form\Form;
+use Joomla\CMS\Helper\SecondaryCategoriesHelper;
 use Joomla\CMS\Helper\TagsHelper;
 use Joomla\CMS\Language\Multilanguage;
 use Joomla\CMS\Language\Text;
@@ -277,6 +278,18 @@ class ContactModel extends FormModel
         }
 
         if ($this->_item[$pk]) {
+            $items  = [$this->_item[$pk]];
+            $helper = new SecondaryCategoriesHelper('com_contact.contact');
+            $helper->loadSecondaryCategoriesForItems($items);
+            $secondaryIds = [];
+
+            if (!empty($this->_item[$pk]->secondary_categories)) {
+                foreach ($this->_item[$pk]->secondary_categories as $secCat) {
+                    $secondaryIds[] = (int) ($secCat->id ?? $secCat);
+                }
+            }
+
+            $this->_item[$pk]->fieldscatid = array_values(array_unique(array_merge([(int) $this->_item[$pk]->catid], $secondaryIds)));
             $this->buildContactExtendedData($this->_item[$pk]);
         }
 
