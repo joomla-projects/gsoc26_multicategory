@@ -69,7 +69,8 @@ class FormModel extends \Joomla\Component\Contact\Administrator\Model\ContactMod
         $user = Factory::getApplication()->getIdentity();
         $id   = (int) $this->getState('contact.id');
 
-        if ($id > 0 && !$user->authorise('core.edit.state', 'com_contact.category.' . (int) $this->getItem($id)->catid)) {
+        $item = $id > 0 ? $this->getItem($id) : false;
+        if ($id > 0 && $item && !$user->authorise('core.edit.state', 'com_contact.category.' . (int) $item->catid)) {
             $form->setFieldAttribute('catid', 'readonly', 'true');
             $form->setFieldAttribute('catid', 'required', 'false');
             $form->setFieldAttribute('catid', 'filter', 'unset');

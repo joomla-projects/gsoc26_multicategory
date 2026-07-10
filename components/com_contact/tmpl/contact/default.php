@@ -79,7 +79,7 @@ $icon    = $this->params->get('contact_icons') == 0;
         <?php $contactLink = RouteHelper::getCategoryRoute($this->item->catid, $this->item->language); ?>
         <<?php echo $htag2; ?>>
             <span class="contact-category">
-                <a href="<?php echo $contactLink; ?>">
+                <a href="<?php echo Route::_($contactLink); ?>">
                     <?php echo $this->escape($this->item->category_title); ?>
                 </a>
             </span>
