@@ -548,18 +548,18 @@ final class PageNavigation extends CMSPlugin implements SubscriberInterface
             . ' THEN ' . $db->quoteName('a.created_by_alias') . ' ELSE ' . $db->quoteName('u.name') . ' END';
 
         return match ($orderby) {
-            'date'   => $queryDate,
-            'rdate'  => $queryDate . ' DESC',
-            'alpha'  => $db->quoteName('a.title'),
-            'ralpha' => $db->quoteName('a.title') . ' DESC',
-            'hits'   => $db->quoteName('a.hits') . ' DESC',
-            'rhits'  => $db->quoteName('a.hits'),
-            'rorder' => $db->quoteName('a.ordering') . ' DESC',
-            'author' => $author,
+            'date'    => $queryDate,
+            'rdate'   => $queryDate . ' DESC',
+            'alpha'   => $db->quoteName('a.title'),
+            'ralpha'  => $db->quoteName('a.title') . ' DESC',
+            'hits'    => $db->quoteName('a.hits') . ' DESC',
+            'rhits'   => $db->quoteName('a.hits'),
+            'rorder'  => $db->quoteName('a.ordering') . ' DESC',
+            'author'  => $author,
             'rauthor' => $author . ' DESC',
-            'front'  => $db->quoteName('a.featured') . ' DESC, ' . $db->quoteName('fp.ordering') . ', ' . $queryDate . ' DESC',
-            'random' => $query->rand(),
-            default  => $db->quoteName('a.ordering'),
+            'front'   => $db->quoteName('a.featured') . ' DESC, ' . $db->quoteName('fp.ordering') . ', ' . $queryDate . ' DESC',
+            'random'  => $query->rand(),
+            default   => $db->quoteName('a.ordering'),
         };
     }
 
