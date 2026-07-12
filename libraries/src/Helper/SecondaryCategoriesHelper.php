@@ -417,8 +417,7 @@ class SecondaryCategoriesHelper extends CMSHelper
         if (!$user->authorise('core.admin')) {
             $query->whereIn(
                 $db->quoteName('mapcat.access'),
-                $user->getAuthorisedViewLevels(),
-                ParameterType::INTEGER
+                $user->getAuthorisedViewLevels()
             );
         }
 
