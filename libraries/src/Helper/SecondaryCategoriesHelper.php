@@ -398,10 +398,28 @@ class SecondaryCategoriesHelper extends CMSHelper
         $query = $db->createQuery()
             ->select('DISTINCT ' . $db->quoteName('m.item_id'))
             ->from($db->quoteName('#__category_item_map', 'm'))
+            ->innerJoin(
+                $db->quoteName('#__categories', 'mapcat'),
+                $db->quoteName('mapcat.id') . ' = ' . $db->quoteName('m.category_id')
+            )
             ->where($db->quoteName('m.context') . ' = ' . $db->quote($this->typeAlias));
 
         if (empty($categoryIds)) {
             return $query->where('1 = 0');
+        }
+
+        $app = Factory::getApplication();
+
+        $query->where($db->quoteName('mapcat.published') . ' = 1');
+
+        $user = $app->getIdentity();
+
+        if (!$user->authorise('core.admin')) {
+            $query->whereIn(
+                $db->quoteName('mapcat.access'),
+                $user->getAuthorisedViewLevels(),
+                ParameterType::INTEGER
+            );
         }
 
         $categoryIdsSql = implode(',', $categoryIds);
