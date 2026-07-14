@@ -341,7 +341,7 @@ class ContentComponent extends MVCComponent implements
         ];
 
         LibraryContentHelper::countRelations($items, $config);
-        
+
         $this->countSecondaryCategoryItems($items);
     }
 
