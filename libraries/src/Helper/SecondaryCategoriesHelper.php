@@ -515,7 +515,7 @@ class SecondaryCategoriesHelper extends CMSHelper
                 $db->quoteName('c.access'),
                 $user->getAuthorisedViewLevels(),
                 ParameterType::INTEGER
-                );
+            );
         }
 
         $rows = $db->setQuery($query)->loadObjectList();

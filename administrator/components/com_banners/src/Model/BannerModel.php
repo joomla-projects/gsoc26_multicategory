@@ -66,9 +66,9 @@ class BannerModel extends AdminModel implements VersionableModelInterface
      * @var  array
      */
     protected $batch_commands = [
-        'client_id'           => 'batchClient',
-        'language_id'         => 'batchLanguage',
-        'secondary_category'  => 'batchSecondaryCategory',
+        'client_id'          => 'batchClient',
+        'language_id'        => 'batchLanguage',
+        'secondary_category' => 'batchSecondaryCategory',
     ];
 
     /**

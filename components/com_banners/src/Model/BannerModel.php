@@ -173,7 +173,7 @@ class BannerModel extends BaseDatabaseModel
             $user    = Factory::getApplication()->getIdentity();
             $isAdmin = $user->authorise('core.admin');
             $cacheId = md5(__METHOD__ . $id . ':' . (int) $isAdmin . ':' . implode(',', $user->getAuthorisedViewLevels()));
-            $loader = function ($id) use ($db, $user, $isAdmin) {
+            $loader  = function ($id) use ($db, $user, $isAdmin) {
 
                 $nowDate = Factory::getDate()->toSql();
                 $query   = $db->createQuery();

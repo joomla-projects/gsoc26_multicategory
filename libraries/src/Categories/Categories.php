@@ -249,7 +249,7 @@ class Categories implements CategoryInterface, DatabaseAwareInterface
             default       => null,
         };
     }
-    
+
     /**
      * Load method
      *
