@@ -48,6 +48,7 @@ class JsonapiView extends BaseApiView
         'language',
         'state',
         'category',
+        'secondary_categories',
         'images',
         'metakey',
         'metadesc',
@@ -87,6 +88,7 @@ class JsonapiView extends BaseApiView
         'language',
         'state',
         'category',
+        'secondary_categories',
         'images',
         'metakey',
         'metadesc',
@@ -242,6 +244,17 @@ class JsonapiView extends BaseApiView
                 $tagsIds    = explode(',', $tagsIds);
                 $item->tags = $tags->getTags($tagsIds);
             }
+        }
+
+        if (!empty($item->secondary_categories)) {
+            $item->secondary_categories = array_values(
+                array_map(
+                    static fn ($category): int => \is_object($category) ? (int) $category->id : (int) $category,
+                    (array) $item->secondary_categories
+                )
+            );
+        } else {
+            $item->secondary_categories = [];
         }
 
         if (isset($item->images)) {

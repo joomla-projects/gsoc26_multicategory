@@ -11,9 +11,11 @@
 namespace Joomla\Component\Content\Api\Controller;
 
 use Joomla\CMS\Filter\InputFilter;
+use Joomla\CMS\Helper\SecondaryCategoriesHelper;
 use Joomla\CMS\Helper\TagsHelper;
 use Joomla\CMS\MVC\Controller\ApiController;
 use Joomla\Component\Fields\Administrator\Helper\FieldsHelper;
+use Joomla\Utilities\ArrayHelper;
 
 // phpcs:disable PSR1.Files.SideEffects
 \defined('_JEXEC') or die;
@@ -60,6 +62,10 @@ class ArticlesController extends ApiController
 
         if (\array_key_exists('category', $apiFilterInfo)) {
             $this->modelState->set('filter.category_id', $filter->clean($apiFilterInfo['category'], 'INT'));
+        }
+
+        if (\array_key_exists('category_match', $apiFilterInfo)) {
+            $this->modelState->set('filter.category_match', $filter->clean($apiFilterInfo['category_match'], 'STRING'));
         }
 
         if (\array_key_exists('search', $apiFilterInfo)) {
@@ -135,6 +141,15 @@ class ArticlesController extends ApiController
             $tags = new TagsHelper();
             $tags->getTagIds($data['id'], 'com_content.article');
             $data['tags'] = explode(',', $tags->tags);
+        }
+
+        if (($this->input->getMethod() === 'PATCH') && !\array_key_exists('secondary_categories', $data)) {
+            $helper                       = new SecondaryCategoriesHelper('com_content.article');
+            $data['secondary_categories'] = $helper->getCurrentSecondaryCategoriesByItem((int) $data['id']);
+        }
+
+        if (\array_key_exists('secondary_categories', $data)) {
+            $data['secondary_categories'] = array_values(array_filter(ArrayHelper::toInteger((array) $data['secondary_categories'])));
         }
 
         return $data;
