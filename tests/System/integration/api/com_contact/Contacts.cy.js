@@ -247,8 +247,8 @@ describe('Test that contacts API endpoint', () => {
           published: 1,
           language: '*',
           com_fields: {
-            'test-secondary-field': 'This is field data!'
-          }
+            'test-secondary-field': 'This is field data!',
+          },
         });
       })
       .then((response) => {
