@@ -268,6 +268,70 @@ describe('Test that content API endpoint', () => {
       });
   });
 
+  it('returns custom fields assigned to secondary categories', () => {
+    let primaryCategoryId = 0;
+    let secondaryCategoryId = 0;
+    let fieldId = 0;
+    let articleId = 0;
+
+    cy.db_createCategory({ extension: 'com_content', title: 'Primary Field Cat' })
+      .then((categoryId) => {
+        primaryCategoryId = categoryId;
+        return cy.db_createCategory({ extension: 'com_content', title: 'Secondary Field Cat' });
+      })
+      .then((categoryId) => {
+        secondaryCategoryId = categoryId;
+
+        return cy.db_createField({
+          title: 'test article field',
+          name: 'test-article-secondary-field',
+          type: 'text',
+          context: 'com_content.article',
+          state: 1,
+          access: 1,
+        });
+      })
+      .then((createdFieldId) => {
+        fieldId = createdFieldId;
+
+        return cy.task('queryDB', `INSERT INTO #__fields_categories (field_id, category_id) VALUES (${fieldId}, ${secondaryCategoryId})`);
+      })
+      .then(() => {
+        return cy.api_post('/content/articles', {
+          title: 'Article with secondary fields',
+          alias: 'article-secondary-fields',
+          catid: primaryCategoryId,
+          secondary_categories: [secondaryCategoryId],
+          introtext: '',
+          fulltext: '',
+          state: 1,
+          access: 1,
+          language: '*',
+          created: '2023-01-01 20:00:00',
+          modified: '2023-01-01 20:00:00',
+          images: '',
+          urls: '',
+          attribs: '',
+          metadesc: '',
+          metadata: '',
+          com_fields: {
+            'test-article-secondary-field': 'This is article field data!'
+          }
+        });
+      })
+      .then((response) => {
+        articleId = response.body.data.id;
+        cy.wrap(response).its('body.data.attributes')
+          .should('have.property', 'test-article-secondary-field', 'This is article field data!');
+
+        return cy.api_get(`/content/articles/${articleId}`);
+      })
+      .then((response) => {
+        cy.wrap(response).its('body.data.attributes')
+          .should('have.property', 'test-article-secondary-field', 'This is article field data!');
+      });
+  });
+
   it('can update an article', () => {
     cy.db_createArticle({ title: 'automated test article' })
       .then((article) => cy.api_patch(`/content/articles/${article.id}`, { title: 'updated automated test article' }))

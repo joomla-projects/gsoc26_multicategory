@@ -128,15 +128,6 @@ class ArticlesController extends ApiController
      */
     protected function preprocessSaveData(array $data): array
     {
-        foreach (FieldsHelper::getFields('com_content.article') as $field) {
-            if (isset($data[$field->name])) {
-                !isset($data['com_fields']) && $data['com_fields'] = [];
-
-                $data['com_fields'][$field->name] = $data[$field->name];
-                unset($data[$field->name]);
-            }
-        }
-
         if (($this->input->getMethod() === 'PATCH') && !(\array_key_exists('tags', $data))) {
             $tags = new TagsHelper();
             $tags->getTagIds($data['id'], 'com_content.article');
@@ -150,6 +141,22 @@ class ArticlesController extends ApiController
 
         if (\array_key_exists('secondary_categories', $data)) {
             $data['secondary_categories'] = array_values(array_filter(ArrayHelper::toInteger((array) $data['secondary_categories'])));
+        }
+
+        if (isset($data['catid'])) {
+            $data['fieldscatid'] = array_values(array_unique(array_filter(array_merge(
+                [(int) $data['catid']],
+                (array) ($data['secondary_categories'] ?? [])
+            ))));
+        }
+
+        foreach (FieldsHelper::getFields('com_content.article', $data) as $field) {
+            if (isset($data[$field->name])) {
+                !isset($data['com_fields']) && $data['com_fields'] = [];
+
+                $data['com_fields'][$field->name] = $data[$field->name];
+                unset($data[$field->name]);
+            }
         }
 
         return $data;

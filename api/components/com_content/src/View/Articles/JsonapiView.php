@@ -198,6 +198,16 @@ class JsonapiView extends BaseApiView
             return $item;
         }
 
+        $fieldCategoryIds = [(int) ($item->catid ?? 0)];
+
+        if (!empty($item->secondary_categories)) {
+            foreach ((array) $item->secondary_categories as $category) {
+                $fieldCategoryIds[] = \is_object($category) ? (int) $category->id : (int) $category;
+            }
+        }
+
+        $item->fieldscatid = array_values(array_unique(array_filter($fieldCategoryIds)));
+
         $item->text = $item->introtext . ' ' . $item->fulltext;
 
         $params = new Registry($item->params ?? '{}');
