@@ -426,9 +426,11 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             $table->reorder('catid = ' . (int) $table->catid . ' AND state >= 0');
         }
 
-        $app                = Factory::getApplication();
-        $secondary          = (array) $app->getInput()->post->get('jform', [], 'array')['secondary_categories'] ?? [];
-        $table->fieldscatid = array_values(array_merge([(int) $table->catid], array_map('intval', $secondary)));
+        if (!isset($table->fieldscatid)) {
+            $jform              = Factory::getApplication()->getInput()->get('jform', [], 'array');
+            $secondary          = (array) ($jform['secondary_categories'] ?? []);
+            $table->fieldscatid = array_values(array_merge([(int) $table->catid], array_map('intval', $secondary)));
+        }
     }
 
     /**
@@ -728,8 +730,11 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
         }
 
         if (isset($data['catid'])) {
-            $secondary           = $data['secondary_categories'] ?? [];
-            $data['fieldscatid'] = array_values(array_merge([(int) $data['catid']], (array) $secondary));
+            $catId               = (int) $data['catid'];
+            $secondary           = array_filter(ArrayHelper::toInteger((array) ($data['secondary_categories'] ?? [])));
+            $manageable          = $this->getManageableSecondaryCategoryIds($catId);
+            $authorizedSecondary = array_values(array_intersect($secondary, $manageable));
+            $data['fieldscatid'] = array_values(array_unique(array_merge([$catId], $authorizedSecondary)));
         }
 
         return parent::validate($form, $data, $group);
@@ -896,10 +901,14 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             $data['secondary_categories'] = $this->normalizeSecondaryCategories($data);
         }
 
-        $data['fieldscatid']           = array_values(array_merge([(int) ($data['catid'] ?? 0)], (array) ($data['secondary_categories'] ?? [])));
+        $catId                         = (int) ($data['catid'] ?? 0);
+        $secondary                     = array_filter(ArrayHelper::toInteger((array) ($data['secondary_categories'] ?? [])));
+        $manageable                    = $this->getManageableSecondaryCategoryIds($catId);
+        $authorizedSecondary           = array_values(array_intersect($secondary, $manageable));
+        $data['fieldscatid']           = array_values(array_unique(array_merge([$catId], $authorizedSecondary)));
         $this->getTable()->fieldscatid = $data['fieldscatid'];
 
-        $rawJForm = $app->getInput()->post->get('jform', [], 'array');
+        $rawJForm = $app->getInput()->get('jform', [], 'array');
         if (!empty($rawJForm['com_fields'])) {
             foreach ($rawJForm['com_fields'] as $fieldName => $fieldValue) {
                 $data['com_fields'][$fieldName] = $fieldValue;
@@ -922,6 +931,7 @@ class ArticleModel extends AdminModel implements WorkflowModelInterface, Version
             }
 
             if (\array_key_exists('secondary_categories', $data)) {
+                $data['id'] = (int) $this->getState($this->getName() . '.id');
                 $this->saveSecondaryCategories($data);
             }
 
