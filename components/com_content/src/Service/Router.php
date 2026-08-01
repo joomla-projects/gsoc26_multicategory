@@ -255,14 +255,27 @@ class Router extends RouterView
     {
         if ($this->noIDs) {
             $dbquery = $this->db->createQuery();
-            $dbquery->select($this->db->quoteName('id'))
-                ->from($this->db->quoteName('#__content'))
-                ->where($this->db->quoteName('alias') . ' = :segment')
+            $dbquery->select($this->db->quoteName('a.id'))
+                ->from($this->db->quoteName('#__content', 'a'))
+                ->where($this->db->quoteName('a.alias') . ' = :segment')
                 ->bind(':segment', $segment);
 
             if (isset($query['id']) && $query['id']) {
-                $dbquery->where($this->db->quoteName('catid') . ' = :id')
-                    ->bind(':id', $query['id'], ParameterType::INTEGER);
+                $context        = 'com_content.article';
+                $secondaryQuery = $this->db->createQuery()
+                    ->select('1')
+                    ->from($this->db->quoteName('#__category_item_map', 'm'))
+                    ->where($this->db->quoteName('m.context') . ' = :secondaryContext')
+                    ->where($this->db->quoteName('m.item_id') . ' = ' . $this->db->quoteName('a.id'))
+                    ->where($this->db->quoteName('m.category_id') . ' = :secondaryCategoryId');
+
+                $dbquery->where(
+                    '(' . $this->db->quoteName('a.catid') . ' = :id'
+                    . ' OR EXISTS (' . $secondaryQuery . '))'
+                )
+                    ->bind(':id', $query['id'], ParameterType::INTEGER)
+                    ->bind(':secondaryContext', $context)
+                    ->bind(':secondaryCategoryId', $query['id'], ParameterType::INTEGER);
             }
 
             $this->db->setQuery($dbquery);

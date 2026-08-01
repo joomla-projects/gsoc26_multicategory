@@ -298,10 +298,19 @@ class HtmlView extends BaseHtmlView
                 $id = 0;
             }
 
+            $categoryIds = array_map(
+                static function ($category) {
+                    return (int) $category->id;
+                },
+                (array) ($this->item->secondary_categories ?? [])
+            );
+            $categoryIds[] = (int) $this->item->catid;
+            $menuCategoryIsArticleCategory = \in_array((int) $id, $categoryIds, true);
+
             $path     = [['title' => $this->item->title, 'link' => '']];
             $category = Categories::getInstance('Content')->get($this->item->catid);
 
-            while ($category !== null && $category->id != $id && $category->id !== 'root') {
+            while ($category !== null && !$menuCategoryIsArticleCategory && $category->id != $id && $category->id !== 'root') {
                 $path[]   = ['title' => $category->title, 'link' => RouteHelper::getCategoryRoute($category->id, $category->language)];
                 $category = $category->getParent();
             }
@@ -327,6 +336,15 @@ class HtmlView extends BaseHtmlView
         }
 
         $this->setDocumentTitle($title);
+        $this->getDocument()->addHeadLink(
+            Route::_(
+                RouteHelper::getArticleRoute($this->item->slug, $this->item->catid, $this->item->language, null, false),
+                true,
+                Route::TLS_IGNORE,
+                true
+            ),
+            'canonical'
+        );
 
         if ($this->item->metadesc) {
             $this->getDocument()->setDescription($this->item->metadesc);
