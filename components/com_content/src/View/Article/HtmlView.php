@@ -304,7 +304,7 @@ class HtmlView extends BaseHtmlView
                 },
                 (array) ($this->item->secondary_categories ?? [])
             );
-            $categoryIds[] = (int) $this->item->catid;
+            $categoryIds[]                 = (int) $this->item->catid;
             $menuCategoryIsArticleCategory = \in_array((int) $id, $categoryIds, true);
 
             $path     = [['title' => $this->item->title, 'link' => '']];

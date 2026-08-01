@@ -131,8 +131,8 @@ class MenuRules implements RulesInterface
             }
 
             if (
-                isset($active->query['view'], $active->query['id'])
-                && isset($needles[$active->query['view']])
+                isset($active->query['view'], $active->query['id'], $needles[$active->query['view']])
+
                 && !\is_bool($needles[$active->query['view']])
                 && isset($needles[$active->query['view']][(int) $active->query['id']])
             ) {
