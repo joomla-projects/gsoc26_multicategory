@@ -96,7 +96,7 @@
 			<field
 				name="include_secondary_categories"
 				type="list"
-				label="JGLOBAL_INCLUDE_SECONDARY_CATEGORIES_LABEL"
+				label="JGLOBAL_INCLUDE_ADDITIONAL_CATEGORIES_LABEL"
 				useglobal="true"
 				class="form-select-color-state"
 				validate="options"
