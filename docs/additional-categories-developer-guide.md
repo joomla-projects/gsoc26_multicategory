@@ -1,7 +1,5 @@
 # Additional Categories for Developers
 
-> This documentation describes a planned Joomla feature. It is not available in Joomla core until the feature is merged.
-
 ## Introduction
 
 Additional Categories allow an item to belong to more than one category. The existing `catid` column remains the primary category. Additional category assignments are stored separately.

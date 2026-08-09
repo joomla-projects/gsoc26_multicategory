@@ -1,7 +1,5 @@
 # Additional Categories
 
-> This documentation describes a planned Joomla feature. It is not available in Joomla core until the feature is merged.
-
 ## Introduction
 
 An item can have one **Category** and one or more **Additional Categories**.
