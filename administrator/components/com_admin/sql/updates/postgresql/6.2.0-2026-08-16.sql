@@ -3,6 +3,15 @@
 --
 
 UPDATE "#__guidedtour_steps"
+SET "target" = 'joomla-field-fancy-select:has(#jform_tags) .choices'
+WHERE "title" IN (
+    'COM_GUIDEDTOURS_TOUR_ARTICLES_STEP_TAGS_TITLE',
+    'COM_GUIDEDTOURS_TOUR_CATEGORIES_STEP_TAGS_TITLE',
+    'COM_GUIDEDTOURS_TOUR_CONTACTS_STEP_TAGS_TITLE',
+    'COM_GUIDEDTOURS_TOUR_NEWSFEEDS_STEP_TAGS_TITLE'
+);
+
+UPDATE "#__guidedtour_steps"
 SET "ordering" = "ordering" + 1
 WHERE ("tour_id" = 3 AND "ordering" >= 25)
    OR ("tour_id" = 7 AND "ordering" >= 67)
