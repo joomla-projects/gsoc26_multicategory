@@ -106,6 +106,8 @@ class MenuRules implements RulesInterface
             $this->buildLookup($language);
         }
 
+        $needles = $this->router->getPath($query);
+
         // Check if the active menu item matches the requested query
         if ($active !== null && isset($query['Itemid'])) {
             // Check if active->query and supplied query are the same
@@ -127,9 +129,16 @@ class MenuRules implements RulesInterface
                 // Just use the supplied menu item
                 return;
             }
-        }
 
-        $needles = $this->router->getPath($query);
+            if (
+                isset($active->query['view'], $active->query['id'], $needles[$active->query['view']])
+
+                && !\is_bool($needles[$active->query['view']])
+                && isset($needles[$active->query['view']][(int) $active->query['id']])
+            ) {
+                return;
+            }
+        }
 
         $layout = isset($query['layout']) && $query['layout'] !== 'default' ? ':' . $query['layout'] : '';
 
