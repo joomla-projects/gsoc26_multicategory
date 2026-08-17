@@ -83,6 +83,8 @@ class HtmlView extends FormView
 
         parent::initializeView();
 
+        $this->getDocument()->getWebAssetManager()->registerAndUseScript('field.secondary-categories', 'layouts/joomla/form/field/secondary-categories.min.js', [], ['defer' => true], ['core', "webcomponent.field-fancy-select"]);
+
         $this->canDo = ContentHelper::getActions('com_content', 'article', $this->item->id);
 
         $url = RouteHelper::getArticleRoute($this->item->id . ':' . $this->item->alias, $this->item->catid, $this->item->language);
